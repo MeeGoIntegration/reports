@@ -1,0 +1,15 @@
+<h3>Filters: <input class="filter" type="button" value="Apply" name="apply"/></h3>
+<div id="filters">
+  <ul>
+  {% for metatype in packagemetatypes %}
+  <li>
+    {% if metatype.choices.all %}
+    {{ metatype.description }} : 
+    {% for choice in  metatype.choices.all %}
+    <label><input class="filter" type="checkbox" value="{{choice.name}}" name="{{metatype.name}}"/>{{ choice.name }}</label>
+    {% endfor %}
+    {% endif %}
+  </li>
+  {% endfor %}
+  </ul>
+</div>

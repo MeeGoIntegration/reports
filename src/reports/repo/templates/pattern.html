@@ -1,0 +1,19 @@
+{% load i18n admin_static admin_modify %}
+{% load url from future %}
+{% load admin_urls %}
+{% load get_pattern %}
+
+{% get_pattern as pattern %}
+{% if pattern %}
+<h2><a class="patterns" href="#">({{ pattern.count }} patterns)</a></h2>
+  <div class="patterns">
+    {% for name, values in pattern.items.items %}
+    <h3>
+      <a class="patname" href="#">{{ name }} - {{ values.version.0 }} - {{ values.version.1 }}</a>
+    </h3>
+    <p>
+      {{ values.summary }}: {{ values.description }}<br/>
+      Requires: {{ values.requires|join:", " }}<br/>
+      {% endfor %}
+  </div>
+{% endif %}

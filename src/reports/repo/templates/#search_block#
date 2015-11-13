@@ -1,0 +1,2 @@
+{% load url from future %}
+{% load admin_urls %}

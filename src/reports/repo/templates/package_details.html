@@ -1,0 +1,51 @@
+{% load render_pkg_meta %}
+{% load what_lookup %}
+
+<h3>
+  <a class="packagename" href="#">{{ pkgname }} - {{ pkg.version }} - {{ pkg.release }}</a> -- {{ pkg.license }}
+</h3>
+  <p>{% if pkg.meta %}
+      {% render_pkg_meta as pkg_meta %}
+      {% for pair in pkg_meta %}
+        {{ pair.0 }} : {{ pair.1 }}<br/>
+      {% endfor %}
+    {% endif %}
+    {% if pkg.messages %}
+      {{ pkg.messages|join:"<br/>" }}
+    {% endif %}
+  </p>
+  <div class="details">
+    {% for po in pkg.binaries %}
+      <h4><a class="pkg_contents_name" href="#">{{ po.name }}-{{ po.arch }}</a></h4>
+      <div class="pkg_contents">
+        {% for kind, items in po.files.viewitems %}
+          <h5>{{ kind }}</h5>
+          <ul>
+          {% for item in items %}
+            <li>{{ item }}</li>
+          {% endfor %}
+          </ul>
+        {% endfor %}
+        {% for kind, caps in po.prco.viewitems %}
+          <h5>{{ kind }}</h5>
+          <ul>
+            {% for cap in caps %}
+              <li>
+                {{ cap }}
+                {% what_lookup as what %}
+                {% for item in what %}
+                  <a href="{{ requires.path }}?packages={{ item }}&details=1">( {{ item }} )</a>
+                {% endfor %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+  <h4><a class="changelog_toggle" href="#">Changelog</a></h4>
+  <div class="changelog">
+    <ul><li>
+      <p>{{ pkg.changelog|join:"<br/>" }}</p>
+    </li></ul>
+  </div>

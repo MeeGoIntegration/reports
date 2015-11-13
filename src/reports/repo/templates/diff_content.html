@@ -1,0 +1,177 @@
+{% load i18n admin_static admin_modify %}
+{% load url from future %}
+{% load admin_urls %}
+{% load render_pkg_meta %}
+
+{% block content %}
+<div id="content-main">
+{% if diff %}
+    {% if live_diff.0 and live_diff.1 %}
+      <form name="creq" action="" method="post">{% csrf_token %}
+    {% endif %}
+<table id="comparison">
+<tr><td class="with-trace">
+  <h2 style="color: darkred;">Compare {{ new_obj }} to {{ old_obj }} {% if not is_popup %}</h2>
+{% for key, value in diff.items %}
+  {% if key == "added" and value %}
+  <h3>Packages added ({{ value.keys|length }})<a class="toggle" href="#">(toggle all)</a></h3>
+  <ul>
+  {% for base_pkgname, pkg  in value.items %}
+    {% ifchanged base_pkgname.1 %}<h3><input class="group" type="checkbox" value="{{ base_pkgname.0 }}" name="group"/>{{ base_pkgname.1 }}</h3>{% endifchanged %}
+    <li>
+        <input class="creq" type="checkbox" value="{{ base_pkgname.2 }}@{{ base_pkgname.0 }}" name="submit"/>
+        <a href="#" class="pkgname">  {{ base_pkgname.2|wordwrap:80 }}</a>
+    </li>
+    <div class="changelog">
+        <ul>
+          <li>Binaries added : {{ pkg.binaries|join:", " }}</li>
+	  {% if pkg.unmet_reqs %}
+            <li>Unmet requirements: {{ pkg.unmet_reqs|join:", " }}
+	  {% endif %}
+          <li>
+            <p>{{ pkg.chlog|join:"<br/>" }}
+               {% if pkg.meta %}
+                   {% render_pkg_meta as pkg_meta %}
+                       {% for pair in pkg_meta %}
+                       {{ pair.0 }} : {{ pair.1 }}<br/>
+                   {% endfor %}
+               {% endif %}
+            </p>
+          </li>
+        </ul>
+    </div>
+  {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if key == "removed" and value %}
+  <h3>Packages removed ({{ value.keys|length }})  <a class="toggle" href="#">(toggle all)</a></h3>
+  <ul>
+  {% for base_pkgname, binaries  in value.items %}
+    {% ifchanged base_pkgname.1 %}<h3><input class="group" type="checkbox" value="{{ base_pkgname.0 }}" name="group"/>{{ base_pkgname.1 }}</h3>{% endifchanged %}
+    <li>
+       <input class="creq" type="checkbox" value="{{ base_pkgname.2 }}@{{ base_pkgname.0 }}" name="delete"/>
+       <a href="#" class="pkgname">  {{ base_pkgname.2|wordwrap:80 }}</a>
+    </li>
+    <div class="changelog">
+    {{ binaries|join:", " }}
+    </div>
+  {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if key == "obsoleted" and value %}
+  <h3>Packages obsoleted ({{ value.keys|length }})</h3>
+  <ul>
+  {% for obspkg, obsby in value.items %}
+    <li>{{ obspkg }} obsoleted by {{ obsby|wordwrap:80 }}</li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if key == "modified" and value %}
+  <h3>Packages modified ({{ value.keys|length }}) <a class="toggle" href="#">(toggle all)</a></h3>
+  <ul>
+  {% for pkgname, pkg in value.items %}
+    {% ifchanged pkgname.1 %}<h3><input class="group" type="checkbox" value="{{ pkgname.0 }}" name="group"/>{{ pkgname.1 }}</h3>{% endifchanged %}
+    <li>
+      <input class="creq" type="checkbox" value="{{ pkgname.2 }}@{{ pkgname.0 }}" name="submit"/>
+      <a class="pkgname" href="#">  {{ pkgname.2 }}</a>
+      <ul>
+      <li>{{ pkg.sense }} : {{ pkg.ovr }} -- {{ pkg.nvr|wordwrap:80 }}
+      </li>
+      {% if pkg.ba %}
+      <li>Binaries added : {{ pkg.ba|join:", " }}
+      </li>
+      {% endif %}
+      {% if pkg.br %}
+      <li>Binaries removed : {{ pkg.br|join:", " }}
+      </li>
+      {% endif %}
+      {% if pkg.meta %}
+      <li>
+         {% render_pkg_meta as pkg_meta %}
+      {% for pair in pkg_meta %}
+        {{ pair.0 }} : {{ pair.1 }}<br/>
+      {% endfor %}
+      </li>
+      {% endif %}
+      {% if pkg.unmet_reqs %}
+         <li>Unmet requirements: {{ pkg.unmet_reqs|join:", " }}
+      {% endif %}
+      </ul>
+    </li>
+    <div class="changelog">
+        <ul><li>
+        <p>{{ pkg.chlo|join:"<br/>" }}</p>
+        </li></ul>
+    </div>
+  {% endfor %}
+  </ul>
+  {% endif %}
+{% endfor %}
+</td>
+<td>
+{% if not is_popup %}
+<h3>
+  <a href="{% url opts|admin_urlname:'diff' old_obj.id new_obj.id %}">(flip)</a>
+  <a href="{{ full_path }}is_popup=1">(export)</a>{% endif %}
+</h3>
+{% if live_diff.0 and live_diff.1 %}
+<h3>
+  <a class="toggle_creq" href="#">(create request)</a>
+  <a href="#" class="creq" id="checkall" >(Check all)</a>
+  <a href="#" class="creq" id="uncheckall" >(Uncheck all)</a>
+</h3>
+<input class="creq" type="submit" value="Create request">
+<br/>
+<textarea rows="2" cols="40" class="creq" name="creq_msg" placeholder="Promotion request message ..."></textarea>
+{% endif %}
+</form>
+{% endif %}
+{% if not is_popup %}
+  {% include "filters.html" %}
+{% endif %}
+<h3>Issue summary:</h3>
+<div id="issues"></div>
+{% if trace.items %}
+<h3> Request trace:<a class="toggle_trace" href="#">(toggle)</a><a class="toggle_trace_details" href="#">(toggle details)</a></h3>
+  <ul class="trace">
+{% endif %}
+    {% for weburl, reqs in trace.items %}
+     {% if reqs %}<b>{{ weburl }}:</b>{% endif %}
+      {% for req in  reqs|dictsort:"id" %}
+      <li><a href="{{ weburl }}/request/show/{{ req.id }}">SR#{{ req.id }}</a> {{ req.dstpackage }} <a class="submitreq" href="#">(expand)</a> </li>
+      <div class="submitdetails">
+        <ul><li>
+	 <p>
+	   <b>Src package:</b> {{ req.srcpackage }} <b>Target package:</b> {{ req.dstpackage }}</br>
+	   <b>From:</b> {{ req.srcproject }} <b>To:</b> {{ req.dstproject }}</br>
+	   <b>When:</b> {{ req.when }}</br>
+	 </p>
+        </li></ul>
+      </div>
+      {% endfor %}
+    
+   {% endfor %}
+
+  </ul>
+  </td>
+</tr>
+<tr>
+  <td>
+    <div><p>Generated at {{ diffts|date:"DATETIME_FORMAT" }}</p></div>
+  </td>
+  <td>Processing time {{processing_time}}</td>
+</tr
+</div>
+<script type="text/javascript">
+    issue_ref = {{ issue_ref|safe }}
+</script>
+<script type="text/javascript" src="{% static "reports/js/collapse.js" %}"></script>
+<script type="text/javascript" src="{% static "reports/js/highlight_bugs.js" %}"></script>
+<script type="text/javascript" src="{% static "reports/js/creq.js" %}"></script>
+<script type="text/javascript" src="{% static "reports/js/filter.js" %}"></script>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,79 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_static admin_modify %}
+{% load url from future %}
+{% load admin_urls %}
+
+{% block extrahead %}{{ block.super }}
+{% url 'admin:jsi18n' as jsi18nurl %}
+<script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
+<script type="text/javascript" src="{% static "reports/js/jquery-1.7.2.min.js" %}"></script>
+<script type="text/javascript" src="{% static "reports/js/jquery-ui.js" %}"></script>
+{{ media }}
+{{ media.js }}
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "reports/css/extra.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "reports/css/jquery-ui.css" %}" />
+<style>
+  .ui-progressbar {
+    position: relative;
+  }
+  .progress-label {
+    position: absolute;
+    left: 50%;
+    top: 4px;
+    font-weight: bold;
+    text-shadow: 1px 1px 0 #fff;
+  }
+</style>
+{% endblock %}
+
+{% block coltype %}{% if ordered_objects %}colMS{% else %}colM{% endif %}{% endblock %}
+
+{% block bodyclass %}{{ opts.app_label }}-{{ opts.object_name.lower }}{% endblock %}
+
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
+&rsaquo; <a href="{% url opts|admin_urlname:'list' %}">{{ opts.verbose_name|capfirst }} List</a>
+</div>
+{% endblock %}
+{% endif %}
+
+{% block content %}
+<div id="progressbar"><div class="progress-label">Loading...</div></div>
+<script type="text/javascript">
+var progress_id = "{{ progress_id }}";
+var progressbar = $( "#progressbar" );
+var progressLabel = $( ".progress-label" );
+var req = false;
+
+progressbar.progressbar({
+  value: false
+});
+var get_progress = setInterval(function(){ 
+  req = $.getJSON("{% url opts|admin_urlname:'diff_progress' progress_id %}", function( json ) {
+    var value = json["{{ progress_id}}"];
+    if ( $.isNumeric( value ) ) {
+      progressbar.progressbar( "value", value );
+      progressLabel.text( value + "%" );
+    } else {
+      progressbar.progressbar( "value", false );
+      progressLabel.text( value );
+    };
+  }); 
+}, 1000);
+$.get("{{ request.path }}?progress_id={{ progress_id }}", function( data ) { 
+  clearInterval(get_progress);
+  if ( req ) {
+    req.abort();
+  };
+  progressbar.progressbar( "destroy" );
+  progressbar.replaceWith(data);
+});
+</script>
+{% endblock %}

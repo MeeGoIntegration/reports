@@ -1,0 +1,105 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_static admin_modify %}
+{% load url from future %}
+{% load admin_urls %}
+
+{% block extrahead %}{{ block.super }}                                                                                                                         
+{% url 'admin:jsi18n' as jsi18nurl %}                                                                                                                          
+<script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>                                                                      
+<script type="text/javascript" src="{% static "reports/js/jquery-1.7.2.min.js" %}"></script>                                                                   
+<script type="text/javascript" src="{% static "reports/js/table.js" %}"></script>                                                                              
+
+{{ media }}                                                                                                                                                    
+{{ media.js }}
+{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" type="text/css" href="{% static "admin/css/changelists.css" %}" />                                                                    
+  {{ media.css }}                                                                                                                                              
+  <style>                                                                                                                                                    
+    #changelist table thead th:first-child {width: inherit}                                                                                                  
+  </style>                                                                                                                                                   
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+<div class="actions"></div>
+{% for rel in releases %}
+{% if forloop.first %}
+  <table id="releases" class="changelist" align="center">
+    <thead>
+      <tr>
+        <th scope="col"><div class="text"><strong>Week</div></th>
+        <th scope="col"><div class="text"><strong>Date</div></th>
+        <th scope="col" class="sortable sorted descending"><div class="text"><strong>Name</div></th>
+        <th scope="col"><div class="text">Release ID</div></th>
+        <th scope="col"><div class="text"><strong>Images</div></th>
+        <th scope="col"><div class="text"><strong>Public</div></th>
+        <th scope="col"><div class="text"><strong>Factory</div></th>
+        <th scope="col" width="35%"><div class="text"><strong>Notes</div></th>
+      </tr>
+    </thead>
+    <tfoot>
+      <tr>
+	<td align="center" colspan="8">
+	  <div class="pagination">
+	    <span class="step-links">
+              {% if releases.has_previous %}
+              <a href="?page={{ releases.previous_page_number }}">previous</a>
+              {% endif %}
+	      
+              <span class="current">
+		Page {{ releases.number }} of {{ releases.paginator.num_pages }}.
+              </span>
+	      
+              {% if releases.has_next %}
+              <a href="?page={{ releases.next_page_number }}">next</a>
+              {% endif %}
+	    </span>
+	  </div>
+	</td>
+      </tr>
+    </tfoot>
+    <tbody>
+{% endif %}
+
+      <tr class="{% cycle "row1" "row2" %}">
+        <td>{{ rel.target.release_date|date:"o-W" }}</td>
+        <td>{{ rel.target.release_date }}</td>
+        <td></a></td>
+        <td><a href="{% url 'admin:reports_repo_view' rel.target.id %}">{{ rel.target.platform.name }} {{ rel.target.release }}</a></td>
+        <td>{% for img in rel.target.images.all %}
+            <a href="{% url 'admin:reports_image_view' img.id%}">{{ img }}</a> <a href="{{ img.url }}">(download)</a>
+            {% if not forloop.last %}<br/>{% endif %}
+            {% endfor %}
+        </td>
+	<td>{{ rel.public|yesno:'<img alt="True" src="/site_media/admin/img/icon-yes.gif"/>,<img alt="False" src="/site_media/admin/img/icon-no.gif"/>'|safe }}</td>
+	<td>{{ rel.factory|yesno:'<img alt="True" src="/site_media/admin/img/icon-yes.gif"/>,<img alt="False" src="/site_media/admin/img/icon-no.gif"/>'|safe }}</td>
+        <td>{% for note in rel.target.note_set.all %}
+            {{ note.body|safe }}
+            {% if perms.note.can_add_note %}                                                                                                
+              <a target="_" href="{% url 'admin:reports_note_change' note.id %}?_popup=1"> (edit note)</a>                               
+            {% endif %}
+            {% if not forloop.last %}<br/>{% endif %}
+            {% empty %}
+              <a target="_" href="{% url 'admin:reports_note_add' %}?_popup=1&repo={{ rel.target.id }}"> (add new note)</a>
+            {% endfor %}
+        </td>
+      </tr>
+
+{% if forloop.last %}
+    </tbody>
+  </table>
+{% endif %}
+
+{% endfor %}
+
+{% endblock %}

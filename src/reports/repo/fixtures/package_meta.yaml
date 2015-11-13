@@ -1,0 +1,43 @@
+- fields: {allow_multiple: false, description: package qa state, name: state}
+  model: repo.packagemetatype
+  pk: 9
+- fields: {allow_multiple: true, description: CE related, name: ce_related}
+  model: repo.packagemetatype
+  pk: 10
+- fields: {allow_multiple: false, description: is package part of an image, name: image}
+  model: repo.packagemetatype
+  pk: 11
+- fields: {allow_multiple: false, description: list of -tests packages in binary,
+    name: test_pkg}
+  model: repo.packagemetatype
+  pk: 12
+- fields: {allow_multiple: false, description: test package not, name: note}
+  model: repo.packagemetatype
+  pk: 13
+- fields: {allow_multiple: false, description: Certification related note, name: CE_note}
+  model: repo.packagemetatype
+  pk: 14
+- fields: {description: review, metatype: 9, name: REVIEW}
+  model: repo.packagemetachoice
+  pk: 19
+- fields: {description: Needs testpackage, metatype: 9, name: NEED-T-PKG}
+  model: repo.packagemetachoice
+  pk: 20
+- fields: {description: package is ok, metatype: 9, name: OK}
+  model: repo.packagemetachoice
+  pk: 21
+- fields: {description: package is buggy, metatype: 9, name: BUGGY}
+  model: repo.packagemetachoice
+  pk: 22
+- fields: {description: package is deprecated, metatype: 9, name: DEPRECATED}
+  model: repo.packagemetachoice
+  pk: 23
+- fields: {description: needed for certification, metatype: 10, name: CE}
+  model: repo.packagemetachoice
+  pk: 24
+- fields: {description: need for Bluetooth, metatype: 10, name: BT}
+  model: repo.packagemetachoice
+  pk: 25
+- fields: {description: needed for CCF, metatype: 10, name: GCF}
+  model: repo.packagemetachoice
+  pk: 26

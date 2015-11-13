@@ -1,0 +1,34 @@
+- fields: {name: 'i586'}
+  model: repo.arch
+  pk: 1
+- fields: {name: 'i686'}
+  model: repo.arch
+  pk: 2
+- fields: {name: 'x86_64'}
+  model: repo.arch
+  pk: 3
+- fields: {name: 'armv7l'}
+  model: repo.arch
+  pk: 4 
+- fields: {name: 'armv7hl'}
+  model: repo.arch
+  pk: 5
+- fields: {name: 'noarch'}
+  model: repo.arch
+  pk: 6
+
+- fields: {name: Jolla}
+  model: repo.platform
+  pk: 1
+
+- fields: {url: 'https://releases.jolla.com/'}
+  model: repo.reposerver
+  pk: 1
+
+- fields:
+    name: MER#
+    platform: [1]
+    re: ((MER#)([0-9]*))
+    url: https://bugs.merproject.org/show_bug.cgi?id=
+  model: repo.issuetracker
+  pk: 2

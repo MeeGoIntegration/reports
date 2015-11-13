@@ -1,0 +1,25 @@
+{% load i18n admin_static admin_modify %}
+{% load url from future %}
+{% load admin_urls %}
+{% load render_pkg_meta %}
+
+<h3>
+  <a class="pkgname" href="#">{{ pkgname }} - {{ pkg.version }} - {{ pkg.release }}</a> -- {{ pkg.license }}
+     -- <a href="{% url 'admin:reports_repo_view' container.id %}?packages={{pkgname}}&details=1">(details)</a>
+</h3>
+  <div class="changelog">
+    <ul><li>
+      <p>{{ pkg.changelog|join:"<br/>" }}</p>
+      </li></ul>
+  </div>
+  <p>Binaries: {{ pkg.binary_names|join:", " }}<br/>
+    {% if pkg.meta %}
+      {% render_pkg_meta as pkg_meta %}
+      {% for pair in pkg_meta %}
+        {{ pair.0 }} : {{ pair.1 }}<br/>
+      {% endfor %}
+    {% endif %}
+    {% if pkg.messages %}
+      {{ pkg.messages|join:"<br/>" }}
+    {% endif %}
+  </p>

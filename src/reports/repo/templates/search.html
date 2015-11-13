@@ -1,0 +1,75 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_static admin_modify %}
+{% load url from future %}
+{% load admin_urls %}
+
+{% block extrahead %}{{ block.super }}
+{% url 'admin:jsi18n' as jsi18nurl %}
+<script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
+<script type="text/javascript" src="{% static "reports/js/jquery-1.7.2.min.js" %}"></script>
+<script type="text/javascript" src="{% static "reports/js/collapse.js" %}"></script>
+<script type="text/javascript" src="{% static "reports/js/highlight_bugs.js" %}"></script>
+<script type="text/javascript" src="{% static "reports/js/filter.js" %}"></script>
+{{ media }}
+{{ media.js }}
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "reports/css/extra.css" %}" />
+{% endblock %}
+
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
+&rsaquo; <a href="{% url opts|admin_urlname:'search' %}">{{ opts.verbose_name|capfirst }} Search</a>
+</div>
+{% endblock %}
+{% endif %}
+
+{% block content %}<div id="content-main">
+
+<table id="comparison">
+  <tr>
+    <td class="main-column">
+    </td>
+    <td class="extra-column">
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <div id="accordion">
+	{% for container, findings in results.viewitems %}
+	  <h2>{{ container }}</h2>
+	  {% for component, pkgs in findings.viewitems %}
+	    <h2>{{ component }}</h2>
+	    <h3><a class="component" href="#">({{ pkgs|length }} packages)</a></h3>
+	    <div class="packages">
+	    {% for pkgname, pkg in pkgs.viewitems %}
+             {% include "package_details.html" %}
+	    {% endfor %}
+	    </div>
+	  {% endfor %}
+        {% empty %}
+          {% if form.is_bound %}
+            <h2>Search returned no results.</h2>
+          {% else %}
+            <h2>No search performed yet.</h2>
+          {% endif %}
+	{% endfor %}
+      </div>
+    </td>
+    <td>
+      <div id="filters">
+	<form action="{% url 'admin:reports_repo_search' %}" method="post">{% csrf_token %}
+	  <h3>Search: <input type="submit" value="Search"/></h3>
+	  {% for field in form %} {{ field.label }} {{ field }} {% endfor %}
+	</form>
+      </div>
+    </td>
+  </tr>
+</table>
+</div>
+{% endblock %}

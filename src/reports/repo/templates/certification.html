@@ -1,0 +1,119 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_static admin_modify %}
+{% load url from future %}
+{% load admin_urls %}
+{% load package_tracking %}
+
+{% block extrahead %}{{ block.super }}
+{% url 'admin:jsi18n' as jsi18nurl %}
+<script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
+<script type="text/javascript" src="{% static "reports/js/jquery-1.7.2.min.js" %}"></script>
+<script type="text/javascript" src="{% static "reports/js/table.js" %}"></script>
+
+{{ media }}
+{{ media.js }}
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "reports/css/extra.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "reports/css/table.css" %}" />
+
+{% endblock %}
+
+{% block coltype %}{% if ordered_objects %}colMS{% else %}colM{% endif %}{% endblock %}
+
+{% block bodyclass %}{{ opts.app_label }}-{{ opts.object_name.lower }} change-form{% endblock %}
+
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
+</div>
+{% endblock %}
+{% endif %}
+
+{% block content %}
+<script>
+  function gotoAnchor()
+  {
+    anchor = "{{ anchor|safe }}"
+    if ( anchor.length > 0 )  { window.location.hash = '#' + anchor; }
+  };
+</script>
+<body onLoad="gotoAnchor()">
+
+<div id="content-main">
+{% if graph  %}
+<br/>
+<h2>{{ container.platform }} {{ container.release }}</h2>
+<h2>Latest device image {{ latest_image }}</h2>
+<br/>
+{% for repo, repos in graph.pkg_meta.items %}
+{% if repo != "img" %}
+  <form name="test-report" action="" method="post">{% csrf_token %}
+
+    <a id="{{ repo }}"/><b>{{ repo }} Packages: {{ repos.keys|length }}</b>
+
+    <table id="t{{ forloop.counter }}" class="test_package table-autosort table-autofilter table-autopage:20 table-stripeclass:alternate table-page-number:t{{ forloop.counter }}page table-page-count:t{{ forloop.counter }}pages table-filtered-rowcount:t{{ forloop.counter }}filtercount table-rowcount:t{{ forloop.counter }}allcount">
+      <thead>
+	<tr>
+	  <th class="filterable">Package<input name="filter" size="8" onkeyup="Table.filter(this,this)"/></th>
+	  <th class="table-filterable">In image</th>
+	  {% for ce_field in ce_fields.packagemetachoice_set.all %}
+	  <th class="table-filterable">{{ ce_field.name }}</th>
+	  {% endfor %}
+	  <th class="table-sortable:default">Certification note</th>
+	</tr>
+      </thead>
+      <tbody>
+	{% for pkg, data in repos.items %}
+
+	{# Display only pkgs that have at least one ce_related field True #}
+	{% if data.ce_related|is_any_defined:ce_fields.packagemetachoice_set.all %}
+	<tr>
+	  {# PACKAGE NAME #}
+	  <td>{{ pkg }}</td>
+
+	  {# PACKAGE PART OF THE IMAGE #}
+	  <td>{{ image_packages|key_in_dict:pkg|yesno }}</td>
+
+	  {# CE RELATED #}
+	  {% for ce_field in ce_fields.packagemetachoice_set.all %}
+	    {% if data.ce_related|key_in_dict:ce_field.name %}
+	      <td><input type="checkbox" disabled="disabled" checked="True" name="{{ ce_field.name }}" value="yes"/></td>
+	    {% else %}
+	      <td><input type="hidden" name="{{ ce_field.name }}" value="no"/></td>
+	    {% endif %}
+	  {% endfor %}
+
+	  {# CE NOTE #}
+	  <td>{{ data.CE_note }}</td>
+	</tr>
+	{% endif %}
+
+	{% endfor %}
+
+      </tbody>
+      <tfoot>
+	<tr>
+	  <td class="table-page:previous" style="cursor:pointer;">&lt; &lt; Previous</td>
+	  <td colspan="4" style="text-align:center;">Page <span id="t{{ forloop.counter }}page"></span>&nbsp;of <span id="t{{ forloop.counter }}pages"></span></td>
+	  <td class="table-page:next" style="cursor:pointer;">Next &gt; &gt;</td>
+	</tr>
+	<tr>
+	  <td colspan="6"><span id="t{{ forloop.counter }}filtercount"></span>&nbsp;of <span id="t{{ forloop.counter }}allcount"></span>&nbsp;rows match filter(s)</td>
+      </tfoot>
+    </table>
+  </form>
+ {% endif %}
+ {% endfor %}
+{% else %}
+<p>
+  Graph not yet created
+ <a href="{% url 'admin:reports_graph_add' %}?repo={{container.id}}">Create graph for whole repo</a>
+</p>
+{% endif %}
+
+{% endblock %}

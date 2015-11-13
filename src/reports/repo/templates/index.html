@@ -1,0 +1,22 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_static admin_modify %}
+{% load url from future %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+</div>
+{% endblock %}
+
+{% block content %}<div id="content-main">
+  <h1>Report shortcuts</h1>
+  <h2>Repositories</h2>
+  <ul>
+  <li><a href="/reports/repo/list/">Repository list </a></li>
+  <li><a href="/reports/repo/view/Jolla/latest/">View latest Jolla </a></li>
+  </ul>
+  <h2>Images</h2>
+  <ul>
+  <li><a href="/reports/image/list/">Image list</a></li>
+  </ul>
+{% endblock %}

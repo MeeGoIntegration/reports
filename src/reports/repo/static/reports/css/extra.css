@@ -1,0 +1,13 @@
+ul li { list-style-type: none; }
+table#comparison { width: 100%; }
+table#comparison td.extra-column{ width: 40%; }
+table#comparison td.main-column{ width: 60%; }
+table#comparison td.with-trace{ width: 60%; }
+div.changelog, div.contents, div.pkg_contents{ display: none; }
+div.repos{ display: none; }
+div.comparable{ display: none; }
+div.submitreq{ display: none; }
+div.packages{ display: none; }
+div.patterns{ display: none; }
+div#issues{ width: 80%; }
+a.creq#checkall, a.creq#uncheckall, input.creq, input.group, textarea.creq { display: none; }
