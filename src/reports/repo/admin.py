@@ -135,12 +135,12 @@ class GraphAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super(GraphAdmin, self).get_urls()
         my_urls = patterns('',
-            url(r'^view/(\d+)/$', self.admin_site.admin_view(self.view), name="reports_graph_view"),
+            url(r'^view/(\d+)/$', self.admin_site.admin_view(self.view), name="repo_graph_view"),
             #url(r'^list/$', self.admin_site.admin_view(self.listall), name="list"),
-            url(r'^testpackage/(\d+)/$', self.admin_site.admin_view(self.view_testreport), name="reports_testpackage_view"),
-            url(r'^testpackage/(.+)/(previous|latest|live.*)/$', self.admin_site.admin_view(self.view_shortcut), name="reports_view_shortcut"),
-            url(r'^certification/(\d+)/$', self.admin_site.admin_view(self.view_testreport), name="reports_testpackage_view"),
-            url(r'^certification/(.+)/(previous|latest|live.*)/$', self.admin_site.admin_view(self.view_shortcut), name="reports_view_shortcut"),
+            url(r'^testpackage/(\d+)/$', self.admin_site.admin_view(self.view_testreport), name="repo_testpackage_view"),
+            url(r'^testpackage/(.+)/(previous|latest|live.*)/$', self.admin_site.admin_view(self.view_shortcut), name="repo_view_shortcut"),
+            url(r'^certification/(\d+)/$', self.admin_site.admin_view(self.view_testreport), name="repo_testpackage_view"),
+            url(r'^certification/(.+)/(previous|latest|live.*)/$', self.admin_site.admin_view(self.view_shortcut), name="repo_view_shortcut"),
         )
         return my_urls + urls
 
@@ -350,7 +350,7 @@ class ABIAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super(ABIAdmin, self).get_urls()
         my_urls = patterns('',
-            url(r'^export/(.+)/$', self.admin_site.admin_view(self.abi_export), name="reports_abi_export"),
+            url(r'^export/(.+)/$', self.admin_site.admin_view(self.abi_export), name="repo_abi_export"),
         )
         return my_urls + urls
 
@@ -382,16 +382,16 @@ class RepoAdmin(admin.ModelAdmin):
         urls = super(RepoAdmin, self).get_urls()
         my_urls = patterns('',
             #url(r'^diff/(.+)/(previous|latest|live.*)/(previous|latest|live.*)/$', self.admin_site.admin_view(self.diff_shortcut), name="reports_diff_shortcut"),
-            url(r'^diff/(.+)/(.+)/(.+)/$', self.admin_site.admin_view(self.diff_shortcut), name="reports_diff_shortcut"),
-            url(r'^diff/progress/(.+)/$', self.admin_site.admin_view(self.diff_progress), name="reports_repo_diff_progress"),
+            url(r'^diff/(.+)/(.+)/(.+)/$', self.admin_site.admin_view(self.diff_shortcut), name="repo_diff_shortcut"),
+            url(r'^diff/progress/(.+)/$', self.admin_site.admin_view(self.diff_progress), name="repo_repo_diff_progress"),
             #url(r'^view/(.+)/(previous|latest|live.*)/$', self.admin_site.admin_view(self.view_shortcut), name="reports_view_shortcut"),
-            url(r'^view/(.+)/(.+)/$', self.admin_site.admin_view(self.view_shortcut), name="reports_view_shortcut"),
-            url(r'^prjgraph/(.+)/(previous|latest|live.*)/$', self.admin_site.admin_view(self.prjgraph_shortcut), name="reports_prjgraph_shortcut"),
-            url(r'^prjgraph/(\d+)/$', self.admin_site.admin_view(self.prjgraph), name="reports_repo_prjgraph"),
-            url(r'^diff/(\d+)/(\d+)/$', self.admin_site.admin_view(self.diff), name="reports_repo_diff"),
-            url(r'^view/(\d+)/$', self.admin_site.admin_view(self.view), name="reports_repo_view"),
-            url(r'^search/$', self.admin_site.admin_view(self.search), name="reports_repo_search"),
-            url(r'^list/$', self.admin_site.admin_view(self.listall), name="reports_repo_list"),
+            url(r'^view/(.+)/(.+)/$', self.admin_site.admin_view(self.view_shortcut), name="repo_view_shortcut"),
+            url(r'^prjgraph/(.+)/(previous|latest|live.*)/$', self.admin_site.admin_view(self.prjgraph_shortcut), name="repo_prjgraph_shortcut"),
+            url(r'^prjgraph/(\d+)/$', self.admin_site.admin_view(self.prjgraph), name="repo_repo_prjgraph"),
+            url(r'^diff/(\d+)/(\d+)/$', self.admin_site.admin_view(self.diff), name="repo_repo_diff"),
+            url(r'^view/(\d+)/$', self.admin_site.admin_view(self.view), name="repo_repo_view"),
+            url(r'^search/$', self.admin_site.admin_view(self.search), name="repo_repo_search"),
+            url(r'^list/$', self.admin_site.admin_view(self.listall), name="repo_repo_list"),
         )
         return my_urls + urls
 
@@ -612,9 +612,9 @@ class ImageAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super(ImageAdmin, self).get_urls()
         my_urls = patterns('',
-            url(r'^diff/(\d+)/(\d+)/$', self.admin_site.admin_view(self.diff), name="reports_image_diff"),
-            url(r'^view/(\d+)/$', self.admin_site.admin_view(self.view), name="reports_image_view"),
-            url(r'^list/$', self.admin_site.admin_view(self.listall), name="reports_image_list"),
+            url(r'^diff/(\d+)/(\d+)/$', self.admin_site.admin_view(self.diff), name="repo_image_diff"),
+            url(r'^view/(\d+)/$', self.admin_site.admin_view(self.view), name="repos_image_view"),
+            url(r'^list/$', self.admin_site.admin_view(self.listall), name="repo_image_list"),
         )
         return my_urls + urls
 
