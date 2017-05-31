@@ -355,19 +355,19 @@ class Repo(object):
 
     @property
     def primary_md(self):
-        return etree.iterparse(self.mds["primary"], tag="{*}package", events=("end",))
+        return etree.iterparse(self.mds["primary"], tag="{*}package", events=("end",), encoding='utf-8', recover=True)
 
     @property
     def filelists_md(self):
-        return etree.iterparse(self.mds["filelists"], tag="{*}package", events=("end",))
+        return etree.iterparse(self.mds["filelists"], tag="{*}package", events=("end",), encoding='utf-8', recover=True)
 
     @property
     def other_md(self):
-        return etree.iterparse(self.mds["other"], tag="{*}package", events=("end",))
+        return etree.iterparse(self.mds["other"], tag="{*}package", events=("end",), encoding='utf-8', recover=True)
 
     @property
     def patterns_md(self):
-        return etree.iterparse(self.mds["patterns"], tag="{*}pattern", events=("end",))
+        return etree.iterparse(self.mds["patterns"], tag="{*}pattern", events=("end",), encoding='utf-8', recover=True)
 
     @property
     def patterns(self):
@@ -403,9 +403,11 @@ class Repo(object):
         if xml is None:
             return
         name = xml.attrib['name']
-        basename = self.packages[name].basename
-        if basename not in self._changelogs:
-            self._changelogs[basename] = [Changelog(entry.attrib['date'], entry.attrib['author'], entry.text) for entry in xml.iterfind("{*}changelog")]
+        po = self.packages.get(name, None)
+        if po:
+            basename = po.basename
+            if basename not in self._changelogs:
+                self._changelogs[basename] = [Changelog(entry.attrib['date'], entry.attrib['author'], entry.text) for entry in xml.iterfind("{*}changelog")]
 
     @property
     def provides(self):

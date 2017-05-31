@@ -39,6 +39,7 @@ except ImportError:
 
 import buildservice
 import pickle
+from osc import core
 
 __all__ =  ["_diff_sacks", "_get_trace", "_get_svg",
             "_graph_projects", "_creq", "_get_dot",
@@ -118,66 +119,35 @@ def _update_pkg_meta(graph, container, img=None):
                 del graph.pkg_meta[repo][pkg]
     graph.save()
 
-def _get_submit_reqs(old_repo_ts, new_repo_ts, projects, apiurl, cache=False):
+def _get_submit_reqs(new_prjs, old_prjs):
 
-    reqs = []
-    #if not live and cache exists and not empty
-    if cache and os.path.exists(cache) and os.path.getsize(cache) > 0:
-        infile = open(cache, 'rb')
-        reqs = pickle.load(infile)
-        infile.close()
-    else:
+    reqs = {"incoming" : [], "in progress" : [], "outgoing" : []}
+    for apiurl, prjs in new_prjs:
         bs = buildservice.BuildService(apiurl=str(apiurl))
-        reqs = bs.getSubmitRequests("accepted", old_repo_ts, new_repo_ts, list(projects))
-        if cache:
-            ofile = open(cache, 'wb')
-            pickle.dump(reqs, ofile)
-            ofile.close()
+        actions = ["(action/target/@project='%s'" % prj for prj in prjs]
+        reqs["incoming"] = core.search(bs.apiurl, request = "(state/@name='new' or state/@name='review') and %s)" % "or".join(actions))
+
+    for apiurl, prjs in old_prjs:
+        bs = buildservice.BuildService(apiurl=str(apiurl))
+        actions = ["(action/source/@project='%s'" % prj for prj in prjs]
+        reqs["outgoing"] = core.search(bs.apiurl, request = "(state/@name='new' or state/@name='review') and %s)" % "or".join(actions))
+
+
+    #reqs = bs.getSubmitRequests("accepted", old_repo_ts, new_repo_ts, list(projects))
     return reqs
 
-#recursive function to get list of leaf repos that a repo is made of
-# and collect the project names associated with it by apiurl
-#prjs is passed by reference so this should work
-def _find_projects(newrepo, oldrepo, prjs):
-    for i in newrepo.components.all():
-        matching_oldrepo = oldrepo
-        if not oldrepo.is_live:
-            try:
-                matching_oldrepo = oldrepo.components.get(platform = i.platform)
-            except ObjectDoesNotExist:
-                pass
-
-        _find_projects(i, matching_oldrepo, prjs)
-    else:
-        bs = newrepo.server.buildservice
-        if bs:
-            prjs[bs.apiurl].update({ "weburl" : bs.weburl, "newts" : newrepo.timestamp}) 
-
-            if oldrepo:
-                prjs[bs.apiurl]["oldts"] = oldrepo.timestamp
- 
-            if "projects" not in prjs[bs.apiurl]:
-                prjs[bs.apiurl]["projects"] = set()
-            prjs[bs.apiurl]["projects"] |= set([ prj.name for prj in newrepo.projects.all() ])
-    return
+def _find_projects(repo):
+    prjs_by_apiurl = defaultdict(set)
+    if repo.is_live:
+        for prj in repo.prjsack:
+            prjs_by_apiurl[prj.apiurl].add(prj) 
+    return prjs_by_apiurl
 
 def _get_trace(old_repo, new_repo):
 
-    prjs_by_apiurl = defaultdict(dict)
-    #generate list of repos that original repo is made of
-    _find_projects(new_repo, old_repo, prjs_by_apiurl)
-    reqs = defaultdict(list)
-    #no projects defined. return with empty list.
-    for apiurl, data in prjs_by_apiurl.items():
-        if data["projects"]:
-            cache_file = False
-            if not new_repo.is_live:
-                cache_dir = os.path.join(new_repo.yumrepos[0].basecachedir, new_repo.yumrepoid)
-                if not os.path.exists(cache_dir):
-                    os.mkdir(cache_dir)
-                cache_file = os.path.join(cache_dir, '_req_trace_on_%s_from_%s' % (apiurl.replace("/","_"), str(old_repo.timestamp) ))
-
-            reqs[data["weburl"]].extend(_get_submit_reqs( data["oldts"], data["newts"], data["projects"], apiurl, cache=cache_file ))
+    new_prjs = _find_projects(new_repo)
+    old_prjs = _find_projects(old_repo)
+    reqs = _get_submit_reqs(new_prjs, old_prjs)
 
     return dict(reqs)
 
@@ -406,7 +376,6 @@ def _graph_projects(platform, prjsack):
 def _find_obs_pkg(bs, pkg, src_project):
     # probably OBS package name is different from src rpm name
     # use obs search api to find the owner
-    from osc import core
     # api call path
     path = 'published/binary/id'
     # search predicate
@@ -453,7 +422,9 @@ def _find_promotion_target(prj, prjsack, reverse=True):
 def _creq(new_repo, old_repo, submit, delete, comment):
     messages = []
     options = defaultdict(list)
-    bs = buildservice.BuildService(apiurl=str(new_repo.server.buildservice.apiurl))
+    apiurl = str(new_repo.server.buildservice.apiurl)
+    weburl = str(new_repo.server.buildservice.weburl)
+    bs = buildservice.BuildService(apiurl=apiurl)
     old_prjsack = old_repo.prjsack
 
     for pkg_repoid in submit:
@@ -521,7 +492,8 @@ def _creq(new_repo, old_repo, submit, delete, comment):
         req = bs.createRequest(options_list = all_actions,
                                description = comment,
                                comment = "Automated request")
-        messages.append("Created SR#%s for %s" % (req.reqid, ", ".join(tgts)))
+        messages.append('Created <a href="%s/request/show/%s">SR#%s</a> for %s' % (weburl, req.reqid, req.reqid, ", ".join(tgts)))
+
     except HTTPError, err:
         status = etree.fromstring(err.read())
         errors.append("Error while creating request: %s" % (status.find(("summary")).text))
@@ -690,8 +662,8 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
                                                             "unmet_reqs" : set()
                                                         }})
 
-                #if key_tuple in modified:
-                #    modified[key_tuple]["unmet_reqs"].update(_find_unmet_reqs(pkg, newsack, oldsack = oldsack))
+                if key_tuple in modified:
+                    modified[key_tuple]["unmet_reqs"].update(_find_unmet_reqs(pkg, repo.yumsack, oldsack = old_comparable))
 
                 # we don't need to look further
                 break
@@ -703,7 +675,7 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
                     added[key_tuple]["meta"] = _get_pkg_meta(pkg.base_package_name, platforms, repo_pkg_meta)
                     added[key_tuple]["unmet_reqs"] = set()
                 added[key_tuple]["binaries"].add(nvr)
-                #added[key_tuple]["unmet_reqs"].update(_find_unmet_reqs(pkg, newsack, oldsack = oldsack))
+                added[key_tuple]["unmet_reqs"].update(_find_unmet_reqs(pkg, repo.yumsack, oldsack = old_comparable))
 
                 if pkg.obsoletes:
                     obsoletes[nvr] = pkg.obsoletes

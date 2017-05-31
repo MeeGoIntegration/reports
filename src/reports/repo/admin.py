@@ -376,6 +376,7 @@ class RepoAdmin(admin.ModelAdmin):
     date_hierarchy = "release_date"
     list_filter = ('platform', 'server')
     search_fields = ['repo_path', 'release']
+    raw_id_fields = ('components', 'projects')
     inlines = [NoteInline]
 
     def get_urls(self):
@@ -559,7 +560,7 @@ class RepoAdmin(admin.ModelAdmin):
         filter_meta = _get_filter_meta(request.GET)
         diff = _sort_filter_diff(diff, repos=filter_repos, meta=filter_meta)
 
-        trace_reqs = _get_trace(old_repo, new_repo)
+        #trace_reqs = _get_trace(old_repo, new_repo)
         issue_ref = []
         names = []
         for i in new_repo.platform.issuetracker_set.all():
@@ -579,7 +580,7 @@ class RepoAdmin(admin.ModelAdmin):
             'packagemetatypes' : list(PackageMetaType.objects.all()),
             'diff' : diff,
             'diffts' : diffts,
-            'trace': trace_reqs,
+            #'trace': trace_reqs,
             'issue_ref'  : json.dumps(issue_ref),
             'full_path' : full_path,
             'processing_time' : end.total_seconds()
@@ -665,7 +666,7 @@ class ImageAdmin(admin.ModelAdmin):
 
         new_repo = new_img.container_repo
         old_repo = old_img.container_repo
-        trace_reqs = _get_trace(old_repo, new_repo)
+        #trace_reqs = _get_trace(old_repo, new_repo)
         issue_ref = []
         names = []
         for repo in new_img.repo.all():
@@ -708,7 +709,7 @@ class ImageAdmin(admin.ModelAdmin):
             'new_obj' : new_img,
             'old_obj' : old_img,
             'is_popup' : is_popup,
-            'trace': trace_reqs,
+            #'trace': trace_reqs,
             'issue_ref'  : json.dumps(issue_ref),
             'packagemetatypes' : list(PackageMetaType.objects.all().prefetch_related("choices")),
             "full_path" : full_path,

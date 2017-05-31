@@ -74,7 +74,7 @@
       <tr class="{% cycle "row1" "row2" %}">
         <td>{{ rel.target.release_date|date:"o-W" }}</td>
         <td>{{ rel.target.release_date }}</td>
-        <td></a></td>
+        <td><a></a></td>
         <td><a href="{% url 'admin:reports_repo_view' rel.target.id %}">{{ rel.target.platform.name }} {{ rel.target.release }}</a></td>
         <td>{% for img in rel.target.images.all %}
             <a href="{% url 'admin:reports_image_view' img.id%}">{{ img }}</a> <a href="{{ img.url }}">(download)</a>

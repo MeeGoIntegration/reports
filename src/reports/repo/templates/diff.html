@@ -67,7 +67,7 @@ var get_progress = setInterval(function(){
     };
   }); 
 }, 1000);
-$.get("{{ request.path }}?progress_id={{ progress_id }}", function( data ) { 
+$.get("{{ request.path }}?progress_id={{ progress_id }}{% if do_regen %}&do_regen=1{% endif %}", function( data ) { 
   clearInterval(get_progress);
   if ( req ) {
     req.abort();

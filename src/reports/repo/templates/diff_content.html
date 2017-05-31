@@ -7,7 +7,7 @@
 <div id="content-main">
 {% if diff %}
     {% if live_diff.0 and live_diff.1 %}
-      <form name="creq" action="" method="post">{% csrf_token %}
+      <form name="creq" action="" method="post" target="_blank">{% csrf_token %}
     {% endif %}
 <table id="comparison">
 <tr><td class="with-trace">
