@@ -8,10 +8,16 @@
      -- <a href="{% url 'admin:reports_repo_view' container.id %}?packages={{pkgname}}&details=1">(details)</a>
 </h3>
   <div class="changelog">
-    <ul><li>
-      <p>{{ pkg.changelog|join:"<br/>" }}</p>
-      </li></ul>
+    <ul>
+      <li>
+        <p>{{ pkg.description }}</p>
+      </li>
+      <li>
+        <p>{{ pkg.changelog|join:"<br/>" }}</p>
+      </li>
+    </ul>
   </div>
+  <p>{{ pkg.summary }}</p>
   <p>Binaries: {{ pkg.binary_names|join:", " }}<br/>
     {% if pkg.meta %}
       {% render_pkg_meta as pkg_meta %}
