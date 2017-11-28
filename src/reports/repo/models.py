@@ -1,25 +1,24 @@
+import datetime
 import os
 import urlparse
-import datetime
-from copy import copy
 from collections import defaultdict
-import yum
-from rpmUtils.miscutils import splitFilename
-from django.db import models
-from django.contrib.auth.backends import RemoteUserBackend
-from django.core.exceptions import ValidationError
-from django.core.cache import cache
-from django import forms
-from django.contrib import admin
-import buildservice
-from lxml import etree
+from copy import copy
 
-from misc import ( _get_latest_repo_pkg_meta, _get_pkg_meta, 
-                   _find_repo_by_id, _fmt_chlog, _find_containers, 
-                   _release_date, _gen_abi, _leaf_components )
-
-import rpmmd
 import requests
+import yum
+from django.contrib.auth.backends import RemoteUserBackend
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.db import models
+from rpmUtils.miscutils import splitFilename
+
+import buildservice
+import rpmmd
+from .misc import (
+    _find_containers, _fmt_chlog, _gen_abi,
+    _get_latest_repo_pkg_meta, _get_pkg_meta, _leaf_components, _release_date
+)
+from south.modelsinspector import add_introspection_rules
 
 try:
     from reports.jsonfield import JSONField
@@ -27,8 +26,8 @@ except ImportError:
     # during development it is in the cwd
     from jsonfield import JSONField
 
-from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["^reports\.jsonfield\.fields\.JSONField"])
+
 
 class Arch(models.Model):
 
@@ -36,6 +35,7 @@ class Arch(models.Model):
         return self.name
 
     name = models.CharField(max_length=50, unique=True)
+
 
 class DocService(models.Model):
 
@@ -45,6 +45,7 @@ class DocService(models.Model):
     def __unicode__(self):
         return self.name
 
+
 class LocalizationService(models.Model):
 
     name = models.CharField(max_length=250, unique=True)
@@ -53,6 +54,7 @@ class LocalizationService(models.Model):
 
     def __unicode__(self):
         return self.name
+
 
 class BuildService(models.Model):
 
@@ -68,6 +70,7 @@ class BuildService(models.Model):
     def api(self):
         return buildservice.BuildService(apiurl=self.apiurl)
 
+
 class Project(models.Model):
 
     def __str__(self):
@@ -75,7 +78,9 @@ class Project(models.Model):
 
     name = models.CharField(max_length=100, null=False, blank=False)
     buildservice = models.ForeignKey(BuildService, null=True)
-    request_target = models.ForeignKey("self", blank=True, null=True, related_name="request_source")
+    request_target = models.ForeignKey(
+        "self", blank=True, null=True, related_name="request_source")
+
 
 class Platform(models.Model):
 
@@ -84,6 +89,7 @@ class Platform(models.Model):
     def __str__(self):
         return self.name
 
+
 class RepoServer(models.Model):
 
     def __str__(self):
@@ -91,6 +97,7 @@ class RepoServer(models.Model):
 
     url = models.CharField(max_length=250, unique=True)
     buildservice = models.ForeignKey(BuildService, blank=True, null=True)
+
 
 class Repo(models.Model):
 
@@ -125,7 +132,9 @@ class Repo(models.Model):
     def pkg_meta(self):
         if self.is_live:
             # try to find a the latest not live repo for our platform
-            not_live = Repo.objects.filter(platform = self.platform).exclude(release_date = None).order_by('-release')
+            not_live = Repo.objects.filter(
+                platform=self.platform,
+            ).exclude(release_date=None).order_by('-release')
             for container in not_live:
                 pkg_meta = _get_latest_repo_pkg_meta(container)
                 if pkg_meta:
@@ -137,43 +146,28 @@ class Repo(models.Model):
 
     @property
     def timestamp(self):
-        #if self.is_live:
         timestamp = datetime.datetime.now()
-        #else:
-        #    timestamp = datetime.datetime.fromtimestamp(self.yumrepos[0].repoXML.timestamp)
         return datetime.datetime.isoformat(timestamp)
 
     @property
     def yumrepoid(self):
-        #return urlparse.urlsplit(self.yumrepourl)[2].replace(":","_").replace("/", "_")
         return str(self.pk)
 
-    #@property
-    #def packages_names_list(self):
-    #    if not hasattr(self, '__packages_names_list'):
-    #        self.__packages_names_list = set(self.yumsack.base_packages)
-            #for pkg in self.yumsack.returnNewestByName():
-            #    self.__packages_names_list.add(pkg.base_package_name)
-
-    #    return self.__packages_names_list
-        
     @property
     def packages(self):
         cachekey = "%s%s" % ("repopackages", self.id)
         pkgs = cache.get(cachekey)
 
-        if not pkgs is None:
+        if pkgs is not None:
             return pkgs
 
         pkgs = {}
-        ARCHS = [ str(x) for x in Arch.objects.all() ]
-        PLATS = set( repo.platform.name for repo in self.comps )
+        ARCHS = [str(x) for x in Arch.objects.all()]
+        PLATS = set(repo.platform.name for repo in self.comps)
         PLATS.add(self.platform.name)
         repo_pkg_meta = self.pkg_meta
-        #sackpkgs = self.yumsack.returnPackages()
-        #sackpkgs.sort(cmp=lambda x,y: x.verCMP(y), reverse=True)
         for pkg in self.yumsack.returnPackages():
-            if not pkg.arch in ARCHS:
+            if pkg.arch not in ARCHS:
                 continue
 
             # have we seen a binary from the same base package before ?
@@ -181,32 +175,58 @@ class Repo(models.Model):
                 # yes, check where it lives
                 if pkg.repoid in pkgs[pkg.base_package_name]:
                     # same repo
-                    if pkg.ver == pkgs[pkg.base_package_name][pkg.repoid]["version"]:
+                    base_pkg = pkgs[pkg.base_package_name][pkg.repoid]
+                    if pkg.ver == base_pkg["version"]:
                         # same version, append to binaries list
-                        pkgs[pkg.base_package_name][pkg.repoid]['binaries'].add(pkg)
-                        pkgs[pkg.base_package_name][pkg.repoid]['binary_names'].add(pkg.name)
-                        if not pkg.name.endswith("debuginfo") and not pkg.name.endswith("debugsource")and not pkg.name.endswith("-doc") and not pkg.name.endswith("-tests") and not pkg.name.endswith("-devel"):
-                            pkgs[pkg.base_package_name][pkg.repoid].update({"description" : pkg.description, "summary" : pkg.summary})
+                        base_pkg['binaries'].add(pkg)
+                        base_pkg['binary_names'].add(pkg.name)
+                        if (
+                            not pkg.name.endswith("debuginfo") and
+                            not pkg.name.endswith("debugsource")and
+                            not pkg.name.endswith("-doc") and
+                            not pkg.name.endswith("-tests") and
+                            not pkg.name.endswith("-devel")
+                        ):
+                            base_pkg.update({
+                                "description": pkg.description,
+                                "summary": pkg.summary,
+                            })
                     else:
                         # oh no different version!
-                        pkgs[pkg.base_package_name][pkg.repoid]["messages"].append("Warning: %s exists in the same repo with different version %s!" % (pkg.name, pkg.ver))
+                        base_pkg["messages"].append(
+                            "Warning: %s exists in the same repo "
+                            "with different version %s!" %
+                            (pkg.name, pkg.ver)
+                        )
                     # no need to look further
                     continue
             else:
                 pkgs[pkg.base_package_name] = {}
 
-            pkg_meta = _get_pkg_meta(pkg.base_package_name, PLATS, repo_pkg_meta)
-            pkgs[pkg.base_package_name][pkg.repoid] = { "version" : pkg.ver,
-                                            "release" : pkg.rel,
-                                            "changelog" : _fmt_chlog(pkg.changelog),
-                                            "license" : pkg.license,
-                                            "binaries" : set([pkg]),
-                                            "binary_names": set([pkg.name]),
-                                            "meta" : pkg_meta,
-                                            "messages" : [],
-                                           }
-            if not pkg.name.endswith("debuginfo") and not pkg.name.endswith("debugsource")and not pkg.name.endswith("-doc") and not pkg.name.endswith("-tests") and not pkg.name.endswith("-devel"):
-                pkgs[pkg.base_package_name][pkg.repoid].update({"description" : pkg.description, "summary" : pkg.summary})
+            pkg_meta = _get_pkg_meta(
+                pkg.base_package_name, PLATS, repo_pkg_meta
+            )
+            pkgs[pkg.base_package_name][pkg.repoid] = {
+                "version": pkg.ver,
+                "release": pkg.rel,
+                "changelog": _fmt_chlog(pkg.changelog),
+                "license": pkg.license,
+                "binaries": set([pkg]),
+                "binary_names": set([pkg.name]),
+                "meta": pkg_meta,
+                "messages": [],
+            }
+            if (
+                not pkg.name.endswith("debuginfo") and
+                not pkg.name.endswith("debugsource")and
+                not pkg.name.endswith("-doc") and
+                not pkg.name.endswith("-tests") and
+                not pkg.name.endswith("-devel")
+            ):
+                pkgs[pkg.base_package_name][pkg.repoid].update({
+                    "description": pkg.description,
+                    "summary": pkg.summary,
+                })
 
         cachelife = (60 * 5) if self.is_live else (60 * 60 * 24)
         cache.set(cachekey, pkgs, cachelife)
@@ -245,34 +265,26 @@ class Repo(models.Model):
 
         if comp is None:
             archs = [arch.name for arch in self.archs.all()]
-            #backward compat, as well as passthrough for urls without @ARCH@
+            # backward compat, as well as passthrough for urls without @ARCH@
             if not archs:
                 archs = ["armv7hl"]
-            
+
             # replace @ARCH@ to desired arch
             for arch in archs:
-                #yumrepoid = self.yumrepoid.replace("@ARCH@", arch)
                 yumrepoid = self.yumrepoid
                 yumrepourl = self.yumrepourl.replace("@ARCH@", arch)
                 print yumrepourl
-                cachedir = os.path.join(yum.misc.getCacheDir(tmpdir=os.path.expanduser("~")), self.yumrepoid, str(arch))
+                cachedir = os.path.join(
+                    yum.misc.getCacheDir(tmpdir=os.path.expanduser("~")),
+                    self.yumrepoid, str(arch),
+                )
                 try:
-                    yumrepo = rpmmd.Repo(yumrepoid, yumrepourl, cachedir=cachedir)
+                    yumrepo = rpmmd.Repo(
+                        yumrepoid, yumrepourl, cachedir=cachedir
+                    )
                     self._yumrepos.append(yumrepo)
                 except requests.exceptions.RequestException, exc:
                     print exc
-                #yumrepo.name = yumrepoid
-                #yumrepo.baseurl = str(yumrepourl)
-                #expire = 99999
-                #if self.is_live:
-                #    expire = 0
-                #yumrepo.metadata_expire = expire
-                #yumrepo.sslverify = 0
-                #try:
-                #    _ = yumrepo.ready()
-                #    yumrepo.sack.populate(yumrepo)
-                #except (yum.Errors.RepoError, yum.Errors.NoMoreMirrorsRepoError):
-                #    print "skipped %s" % yumrepourl
 
         return self._yumrepos
 
@@ -282,11 +294,6 @@ class Repo(models.Model):
             return self._yumsack
 
         self._yumsack = rpmmd.RepoSack(self.yumrepos)
-        #for repo in self.yumrepos:
-        #    _yumsack.addList(repo.sack.returnPackages())
-
-        #_yumsack.buildIndexes()
-        #self.__yumsack = _yumsack
         return self._yumsack
 
     @property
@@ -294,9 +301,11 @@ class Repo(models.Model):
         if hasattr(self, '_comparable'):
             return self._comparable
 
-        _comparable = Repo.objects.filter(platform = self.platform).exclude(id = self.id)
-        #_comparable = _comparable.exclude(release__gt = self.release)
-        _comparable = _comparable.order_by('-release').select_related('platform', 'server').prefetch_related('projects')
+        _comparable = Repo.objects.filter(platform=self.platform)\
+            .exclude(id=self.id)\
+            .order_by('-release')\
+            .select_related('platform', 'server')\
+            .prefetch_related('projects')
         self._comparable = list(_comparable)
         return self._comparable
 
@@ -322,10 +331,14 @@ class Repo(models.Model):
     repo_path = models.CharField(max_length=250)
     platform = models.ForeignKey(Platform)
     projects = models.ManyToManyField(Project, blank=True, null=True)
-    components = models.ManyToManyField("self", symmetrical=False, blank=True, null=True, related_name="containers")
+    components = models.ManyToManyField(
+        "self", symmetrical=False, blank=True, null=True,
+        related_name="containers"
+    )
     release = models.CharField(max_length=250)
     release_date = models.DateField(blank=True, null=True)
     archs = models.ManyToManyField(Arch, blank=True, null=True)
+
 
 class Note(models.Model):
 
@@ -335,8 +348,9 @@ class Note(models.Model):
     body = models.TextField()
     repo = models.ForeignKey(Repo, unique=True)
 
+
 class IssueTracker(models.Model):
-    
+
     def __str__(self):
         return "%s %s %s" % (self.name, self.re, self.url)
 
@@ -344,6 +358,7 @@ class IssueTracker(models.Model):
     re = models.CharField(max_length=100)
     url = models.CharField(max_length=200)
     platform = models.ManyToManyField(Platform, blank=True, null=True)
+
 
 class Image(models.Model):
 
@@ -359,7 +374,8 @@ class Image(models.Model):
     url_file = models.CharField(max_length=250)
     urls = models.TextField(blank=True, null=True)
     repo = models.ManyToManyField(Repo, blank=True, null=True)
-    container_repo = models.ForeignKey(Repo, blank=True, null=True, related_name="images")
+    container_repo = models.ForeignKey(
+        Repo, blank=True, null=True, related_name="images")
 
     @property
     def archs(self):
@@ -410,7 +426,7 @@ class Image(models.Model):
             return self.container_repo.projects
         else:
             return None
- 
+
     @property
     def bpkgs(self):
         _bpkgs = []
@@ -429,7 +445,7 @@ class Image(models.Model):
                 for repoid, pkg in repoid_pkg.items():
                     binaries = copy(pkg['binaries'])
                     for binary in pkg['binaries']:
-                        if not binary in image_bpkgs:
+                        if binary not in image_bpkgs:
                             binaries.remove(binary)
                     if binaries:
                         pkg['binaries'] = binaries
@@ -453,27 +469,36 @@ class Image(models.Model):
         return imgs
 
     def save(self, *args, **kwargs):
-        self.full_clean() # performs regular validation then clean()
+        # performs regular validation then clean()
+        self.full_clean()
         super(Image, self).save(*args, **kwargs)
-        self.link_to_repos() #won't work through admin view since m2m field is cleared after save
+        # won't work through admin view since m2m field is cleared after save
+        self.link_to_repos()
 
     def clean(self):
         if self.id:
-            _ = len(self.repos)
+            # FIXME: what is this supposed to do?
+            len(self.repos)
         return
 
     def set_container_repo(self):
 
         containers = defaultdict(int)
-        _find_containers(list(self.repo.all().prefetch_related("containers")), containers)
+        _find_containers(
+            list(self.repo.all().prefetch_related("containers")),
+            containers
+        )
         _cont = None
         if containers:
-            _cont = max(containers.iterkeys(), key=(lambda key: containers[key]))
-        
+            _cont = max(
+                containers.iterkeys(),
+                key=(lambda key: containers[key])
+            )
+
         if _cont:
             __container_repo = Repo.objects.get(id=_cont)
         else:
-            #currently support only images that have a single container repo
+            # currently support only images that have a single container repo
             __container_repo = None
 
         self.container_repo = __container_repo
@@ -482,10 +507,10 @@ class Image(models.Model):
     def link_to_repos(self):
         _repos = set()
         found_repos = set()
-        archs = set([ arch.name for arch in Arch.objects.all() ])
+        archs = set([arch.name for arch in Arch.objects.all()])
         for url in self.urls.splitlines():
             _repos.add(os.path.dirname(url))
-    
+
         for urlline in _repos:
             print urlline
             for arch in archs:
@@ -496,10 +521,11 @@ class Image(models.Model):
             found = False
             while not found and path:
                 try:
-                    repo = Repo.objects.get(server__url=srv, repo_path=path, components=None)
+                    repo = Repo.objects.get(
+                        server__url=srv, repo_path=path, components=None)
                     found_repos.add(repo)
                     found = True
-                except Repo.DoesNotExist, e:
+                except Repo.DoesNotExist:
                     path = os.path.dirname(path)
 
             if not found:
@@ -512,7 +538,6 @@ class Image(models.Model):
                     for repo in pointer.target.components.all():
                         repo_split_path = repo.repo_path.split("/")
                         split_path = path.split("/")
-
 
                         while not found and split_path:
                             print pointer.name
@@ -534,23 +559,27 @@ class Image(models.Model):
                             else:
                                 split_path = split_path[0:-1]
 
-                except Pointer.DoesNotExist, e:
+                except Pointer.DoesNotExist:
                     pass
 
             if not found:
-                raise ValidationError("Cannot find Repo matching url %s" % urlline)
+                raise ValidationError(
+                    "Cannot find Repo matching url %s" % urlline
+                )
 
         for _repo in found_repos:
             self.repo.add(_repo)
 
+
 class Pointer(models.Model):
     def __unicode__(self):
-        return "%s -> %s" % ( self.name, str(self.target) )
+        return "%s -> %s" % (self.name, str(self.target))
 
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
     factory = models.BooleanField(default=False)
     target = models.ForeignKey(Repo, unique=True)
+
 
 class ABI(models.Model):
 
@@ -567,6 +596,7 @@ class ABI(models.Model):
     def listing(self):
         return _gen_abi(self)
 
+
 class Graph(models.Model):
 
     def __unicode__(self):
@@ -576,33 +606,46 @@ class Graph(models.Model):
     def has_pkg_meta(self):
         return self.pkg_meta and len(self.pkg_meta.keys())
 
-    direction = models.IntegerField(choices=[(0,"normal"),(1,"reverse"),(2,"both")])
+    direction = models.IntegerField(
+        choices=[
+            (0, "normal"),
+            (1, "reverse"),
+            (2, "both")
+        ]
+    )
     depth = models.PositiveIntegerField(blank=True, null=True, default=3)
     image = models.ForeignKey(Image, blank=True, null=True)
     packages = models.TextField(blank=True, null=True)
     repo = models.ManyToManyField(Repo, blank=True, null=True)
-    dot  = models.FileField(upload_to="graph")
+    dot = models.FileField(upload_to="graph")
     svg = models.FileField(upload_to="graph", null=True)
     pkg_meta = JSONField(blank=True, null=True)
+
 
 class PackageMetaType(models.Model):
 
     def __str__(self):
         return self.name
 
-    name = models.CharField(max_length=100, null=False, blank=False, unique=True)
+    name = models.CharField(
+        max_length=100, null=False, blank=False, unique=True
+    )
     description = models.TextField()
     allow_multiple = models.BooleanField()
     default = models.ForeignKey("PackageMetaChoice", blank=True, null=True)
+
 
 class PackageMetaChoice(models.Model):
 
     def __str__(self):
         return self.name
 
-    name = models.CharField(max_length=100, null=False, blank=False, unique=True)
+    name = models.CharField(
+        max_length=100, null=False, blank=False, unique=True)
     description = models.TextField()
-    metatype = models.ForeignKey(PackageMetaType, blank=False, null=False, related_name="choices")
+    metatype = models.ForeignKey(
+        PackageMetaType, blank=False, null=False, related_name="choices")
+
 
 class RemoteStaffBackend(RemoteUserBackend):
 

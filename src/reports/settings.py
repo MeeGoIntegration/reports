@@ -1,10 +1,11 @@
 # Django settings for reports project.
-from os.path import abspath, dirname, join
+import ConfigParser
+from os.path import dirname, join
+
 PROJECT_DIR = dirname(__file__)
 
-CONFIG="/etc/skynet/reports.conf"
+CONFIG = "/etc/skynet/reports.conf"
 
-import ConfigParser
 config = ConfigParser.ConfigParser()
 try:
     config.readfp(open(CONFIG))
@@ -37,15 +38,15 @@ db_pass = config.get('db', 'db_pass')
 db_host = config.get('db', 'db_host')
 
 DATABASES = {
-            'default': {
-                'ENGINE' : 'django.db.backends.' + db_engine,
-                'NAME' : db_name,
-                'USER' : db_user,
-                'PASSWORD' : db_pass,
-                'HOST' : db_host,
-                'PORT' : '',
-                }
-            }
+    'default': {
+        'ENGINE': 'django.db.backends.' + db_engine,
+        'NAME': db_name,
+        'USER': db_user,
+        'PASSWORD': db_pass,
+        'HOST': db_host,
+        'PORT': '',
+    }
+}
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -94,7 +95,7 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    #join(PROJECT_DIR, 'reports/static'),
+    # join(PROJECT_DIR, 'reports/static'),
 )
 
 # List of finder classes that know how to find static files in
@@ -102,7 +103,7 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
 # Make this unique, and don't share it with anybody.
@@ -111,14 +112,15 @@ SECRET_KEY = config.get('web', 'secret_key')
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
-   ('django.template.loaders.cached.Loader', (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
-   )),
+    ('django.template.loaders.cached.Loader', [
+        'django.template.loaders.filesystem.Loader',
+        'django.template.loaders.app_directories.Loader',
+        # 'django.template.loaders.eggs.Loader',
+    ]
+    ),
 )
 
-#TEMPLATE_CONTEXT_PROCESSORS = (
+# TEMPLATE_CONTEXT_PROCESSORS = (
 #    "django.contrib.auth.context_processors.auth",
 #    "django.core.context_processors.debug",
 #    "django.core.context_processors.i18n",
@@ -126,7 +128,7 @@ TEMPLATE_LOADERS = (
 #    "django.core.context_processors.static",
 #    "django.core.context_processors.tz",
 #    "django.contrib.messages.context_processors.messages"
-#)
+# )
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
@@ -134,7 +136,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    #'django.middleware.gzip.GZipMiddleware',
+    # 'django.middleware.gzip.GZipMiddleware',
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
@@ -144,7 +146,8 @@ ROOT_URLCONF = 'reports.urls'
 WSGI_APPLICATION = 'reports.wsgi'
 
 TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
+    # Put strings here, like "/home/html/django_templates" or
+    # "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
     join(PROJECT_DIR, 'templates'),
@@ -180,7 +183,9 @@ LOGGING = {
 }
 
 if PRODUCTION:
-    MIDDLEWARE_CLASSES += ('django.contrib.auth.middleware.RemoteUserMiddleware',)
+    MIDDLEWARE_CLASSES += (
+        'django.contrib.auth.middleware.RemoteUserMiddleware',
+    )
     AUTH_LDAP_AUTHORIZE_ALL_USERS = True
     AUTH_LDAP_CACHE_GROUPS = True
     AUTH_LDAP_GROUP_CACHE_TIMEOUT = 300
@@ -211,13 +216,13 @@ CACHES = {
         'LOCATION': 'reports_cache_table',
         'TIMEOUT': CACHE_LIFETIME,
         'OPTIONS': {
-            'MAX_ENTRIES' : 10000,
+            'MAX_ENTRIES': 10000,
         }
     }
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 8
-#MIDDLEWARE_CLASSES = MIDDLEWARE_CLASSES + ('snippetscream.ProfileMiddleware',)
-#MIDDLEWARE_CLASSES = MIDDLEWARE_CLASSES + ('debug_toolbar.middleware.DebugToolbarMiddleware',)
-#INSTALLED_APPS = INSTALLED_APPS + ('debug_toolbar',)
-#INTERNAL_IPS = ('127.0.0.1','197.133.218.195')
+# MIDDLEWARE_CLASSES += ('snippetscream.ProfileMiddleware',)
+# MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+# INSTALLED_APPS += ('debug_toolbar',)
+# INTERNAL_IPS = ('127.0.0.1','197.133.218.195')
