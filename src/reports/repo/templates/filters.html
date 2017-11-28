@@ -4,7 +4,7 @@
   {% for metatype in packagemetatypes %}
   <li>
     {% if metatype.choices.all %}
-    {{ metatype.description }} : 
+    {{ metatype.description }} :
     {% for choice in  metatype.choices.all %}
     <label><input class="filter" type="checkbox" value="{{choice.name}}" name="{{metatype.name}}"/>{{ choice.name }}</label>
     {% endfor %}

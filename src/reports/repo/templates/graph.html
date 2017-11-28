@@ -32,7 +32,7 @@
 {% block content %}
 <div id="content-main">
 <p>Showing {% if graph.packages %}
-{{ graph.depth }} levels deep 
+{{ graph.depth }} levels deep
 {% if graph.direction == 0 %}
  normal
 {% elif graph.direction == 1 %}
@@ -40,12 +40,12 @@
 {% else %}
  reverse and normal
 {% endif %}
- deps for 
+ deps for
 {{ graph.packages }}
  in
 {% endif %}
 {% if graph.image %}
-{{ graph.image }} 
+{{ graph.image }}
 {% else %}
 {{ graph.repo.all|join:", " }}
 {% endif %}
