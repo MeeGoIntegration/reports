@@ -2,6 +2,7 @@
 {% load i18n admin_static admin_modify %}
 {% load url from future %}
 {% load admin_urls %}
+{% load boolean_icon %}
 
 {% block extrahead %}{{ block.super }}
 {% url 'admin:jsi18n' as jsi18nurl %}
@@ -81,8 +82,8 @@
             {% if not forloop.last %}<br/>{% endif %}
             {% endfor %}
         </td>
-	<td>{{ rel.public|yesno:'<img alt="True" src="/site_media/admin/img/icon-yes.gif"/>,<img alt="False" src="/site_media/admin/img/icon-no.gif"/>'|safe }}</td>
-	<td>{{ rel.factory|yesno:'<img alt="True" src="/site_media/admin/img/icon-yes.gif"/>,<img alt="False" src="/site_media/admin/img/icon-no.gif"/>'|safe }}</td>
+        <td>{{ rel.public|boolean_icon }}</td>
+        <td>{{ rel.factory|boolean_icon }}</td>
         <td>{% for note in rel.target.note_set.all %}
             {{ note.body|safe }}
             {% if perms.note.can_add_note %}
