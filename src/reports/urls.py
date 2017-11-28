@@ -15,13 +15,6 @@ router.register(r'releases', repo_views.ReleaseViewSet)
 
 urlpatterns = patterns(
     '',
-    (
-        r'^%s(?P<path>.*)$' % settings.MEDIA_URL,
-        'django.views.static.serve', {
-            'document_root': settings.MEDIA_ROOT,
-            'show_indexes': True,
-        }
-    ),
     url(r'^api/', include(router.urls)),
     (r'^releases/$', repo_views.releases, {}),
     (r'^/$', TemplateView.as_view(template_name='index.html')),
