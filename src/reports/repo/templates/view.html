@@ -58,7 +58,7 @@
   <h2>Viewing details of <a href="{{ container.url }}">{{ container }}</a> <a class="toggle" href="#">(toggle all)</a></h2>
   {% endif %}
   {% if container.container_repo %}
-  <h3> part of  <a href="{% url 'admin:reports_repo_view' container.container_repo.id %}">{{container.container_repo}}</a></h3>
+  <h3> part of  <a href="{% url 'admin:repo_repo_view' container.container_repo.id %}">{{container.container_repo}}</a></h3>
   {% endif %}
   {% if container.version %}
   <h3>( {{ container.version }} )</h3>
@@ -97,9 +97,9 @@
 
 <h2>Graphs</h2>
 {% for graph in graphs %}
-<a href="{% url "admin:reports_graph_view" graph.id %}">{{ graph }}</a><br/>
+<a href="{% url "admin:repo_graph_view" graph.id %}">{{ graph }}</a><br/>
 {% empty %}
-  <a href="{% url 'admin:reports_graph_add' %}?{{opts.verbose_name}}={{container.id}}">Create graph for whole {{opts.verbose_name}}</a>
+  <a href="{% url 'admin:repo_graph_add' %}?{{opts.verbose_name}}={{container.id}}">Create graph for whole {{opts.verbose_name}}</a>
 {% endfor %}
 
 {% for comp in container.comps %}
@@ -108,7 +108,7 @@
     <ul><div class="repocomps">
   {% endif %}
       <li>
-        <a href="{% url "admin:reports_repo_view" comp.id %}">{{ comp }}</a>
+        <a href="{% url "admin:repo_repo_view" comp.id %}">{{ comp }}</a>
       </li>
   {% if forloop.last %}
     </ul>
@@ -120,7 +120,7 @@
     <h2>Images</h2>
     <ul>
   {% endif %}
-      <li><a href="{% url "admin:reports_image_view" img.id %}">{{ img }}</a></li>
+      <li><a href="{% url "admin:repo_image_view" img.id %}">{{ img }}</a></li>
   {% if forloop.last %}
     </ul>
   {% endif %}
@@ -129,7 +129,7 @@
 {% if container.is_live %}
 <h2>Projects</h2>
   <ul>
-  <li><a href="{% url "admin:reports_repo_prjgraph" container.id %}">View build chain graph</a></li>
+  <li><a href="{% url "admin:repo_repo_prjgraph" container.id %}">View build chain graph</a></li>
   {% for prj in container.prjsack %}
   <li>
     {{ prj }}

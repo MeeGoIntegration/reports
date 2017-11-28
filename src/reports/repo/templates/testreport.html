@@ -162,7 +162,7 @@
 {% else %}
 <p>
   Graph not yet created
- <a href="{% url 'admin:reports_graph_add' %}?repo={{container.id}}">Create graph for whole repo</a>
+ <a href="{% url 'admin:repo_graph_add' %}?repo={{container.id}}">Create graph for whole repo</a>
 </p>
 {% endif %}
 
