@@ -4,18 +4,15 @@ from os.path import dirname, join
 
 PROJECT_DIR = dirname(__file__)
 
-CONFIG = "/etc/skynet/reports.conf"
-
 config = ConfigParser.ConfigParser()
-try:
-    config.readfp(open(CONFIG))
-except Exception:
-    try:
-        # during docs build
-        config.readfp(open("src/reports/reports.conf"))
-    except IOError:
-        # when developing it is in cwd
-        config.readfp(open("reports.conf"))
+# Read defaults
+config.readfp(open(join(PROJECT_DIR, "reports.conf")))
+# Read overrides from etc and local file for developement setup
+config.read([
+    "/etc/reports/reports.conf",
+    "local.conf",
+])
+
 
 URL_PREFIX = config.get('web', 'url_prefix')
 static_media_collect = config.get('web', 'static_media_collect')

@@ -48,6 +48,7 @@ setup(
         ],
         'reports': [
             'templates/admin/*.html',
+            'reports.conf'
         ],
     },
     data_files=static_files,
