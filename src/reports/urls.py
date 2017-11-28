@@ -1,9 +1,10 @@
 from django.conf.urls import include, patterns, url
+from django.conf import settings
 from django.contrib import admin
 from django.views.generic import TemplateView
-from reports import settings
-from reports.repo import views as repo_views
 from rest_framework import routers
+
+from reports.repo import views as repo_views
 
 admin.autodiscover()
 

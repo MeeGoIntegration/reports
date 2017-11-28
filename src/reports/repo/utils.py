@@ -5,7 +5,9 @@ from copy import copy
 from tempfile import mkstemp
 from urllib2 import HTTPError
 
+import pydot
 import yum
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files import File
 from django.core.files.base import ContentFile
@@ -15,19 +17,12 @@ from django.utils.datastructures import SortedDict
 from osc import core
 
 import buildservice
-import pydot
 
 from .misc import (
     _exclude_by_meta, _find_comparable_component, _find_unmet_reqs, _fmt_chlog,
     _get_pkg_meta
 )
 from .models import Arch, Graph, Image, PackageMetaType, Repo
-
-try:
-    import reports.settings as settings
-except ImportError:
-    # during development it is in the cwd
-    import settings
 
 try:
     from lxml import etree

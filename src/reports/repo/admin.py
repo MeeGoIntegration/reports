@@ -7,6 +7,7 @@ from copy import copy
 
 from django import forms
 from django.conf.urls import patterns, url
+from django.conf import settings
 from django.contrib import admin, messages
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -28,12 +29,6 @@ from .utils import (
     _get_latest_image, _get_svg, _graph_projects, _sort_filter_diff,
     _update_pkg_meta
 )
-
-try:
-    from reports import settings
-except ImportError:
-    # during development it is in the cwd
-    import settings
 
 
 def _deref(plat, symb):
