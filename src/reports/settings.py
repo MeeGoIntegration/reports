@@ -140,7 +140,7 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = 'reports.urls'
 # Python dotted path to the WSGI application used by Django's runserver.
-WSGI_APPLICATION = 'reports.wsgi'
+WSGI_APPLICATION = 'reports.wsgi.application'
 
 TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or
