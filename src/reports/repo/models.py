@@ -6,19 +6,21 @@ from copy import copy
 
 import requests
 import yum
+from django.conf import settings
 from django.contrib.auth.backends import RemoteUserBackend
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
 from rpmUtils.miscutils import splitFilename
+from south.modelsinspector import add_introspection_rules
 
 import buildservice
 import rpmmd
+
 from .misc import (
-    _find_containers, _fmt_chlog, _gen_abi,
-    _get_latest_repo_pkg_meta, _get_pkg_meta, _leaf_components, _release_date
+    _find_containers, _fmt_chlog, _gen_abi, _get_latest_repo_pkg_meta,
+    _get_pkg_meta, _leaf_components, _release_date
 )
-from south.modelsinspector import add_introspection_rules
 
 try:
     from reports.jsonfield import JSONField
@@ -275,7 +277,7 @@ class Repo(models.Model):
                 yumrepourl = self.yumrepourl.replace("@ARCH@", arch)
                 print yumrepourl
                 cachedir = os.path.join(
-                    yum.misc.getCacheDir(tmpdir=os.path.expanduser("~")),
+                    yum.misc.getCacheDir(tmpdir=settings.YUM_CACHE_DIR),
                     self.yumrepoid, str(arch),
                 )
                 try:

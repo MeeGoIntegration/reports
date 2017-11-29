@@ -1,6 +1,8 @@
 # Django settings for reports project.
 import ConfigParser
-from os.path import dirname, join
+from os.path import dirname, expanduser, isdir, join
+
+from django.core.exceptions import ImproperlyConfigured
 
 PROJECT_DIR = dirname(__file__)
 
@@ -32,6 +34,14 @@ MANAGERS = ADMINS
 
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = config.get('base', 'secret_key')
+
+YUM_CACHE_DIR = config.get('base', 'yum_cache_dir')
+if not YUM_CACHE_DIR:
+    YUM_CACHE_DIR = expanduser("~")
+if not isdir(YUM_CACHE_DIR):
+    raise ImproperlyConfigured(
+        'YUM_CACHE_DIR %s is not directory' % YUM_CACHE_DIR
+    )
 
 DATABASES = {
     'default': {
