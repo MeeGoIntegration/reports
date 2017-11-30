@@ -44,6 +44,7 @@ if not isdir(YUM_CACHE_DIR):
         'YUM_CACHE_DIR %s is not directory' % YUM_CACHE_DIR
     )
 
+_db_options = json.loads(config.get('db', 'options'))
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.' + config.get('db', 'engine'),
@@ -52,6 +53,7 @@ DATABASES = {
         'PASSWORD': config.get('db', 'pass'),
         'HOST': config.get('db', 'host'),
         'PORT': config.get('db', 'port'),
+        'OPTIONS': _db_options,
     }
 }
 
