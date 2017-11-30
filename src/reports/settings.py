@@ -1,5 +1,6 @@
 # Django settings for reports project.
 import ConfigParser
+import json
 from os.path import dirname, expanduser, isdir, join
 
 from django.core.exceptions import ImproperlyConfigured
@@ -182,16 +183,14 @@ INSTALLED_APPS = (
     'south',
 )
 
-CACHE_LIFETIME = 60 * 60 * 24
+_cache_options = json.loads(config.get('cache', 'options'))
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'reports_cache_table',
-        'TIMEOUT': CACHE_LIFETIME,
-        'OPTIONS': {
-            'MAX_ENTRIES': 10000,
-        }
+        'BACKEND': config.get('cache', 'backend'),
+        'LOCATION': config.get('cache', 'location'),
+        'TIMEOUT': config.get('cache', 'timeout'),
+        'OPTIONS': _cache_options,
     }
 }
 
