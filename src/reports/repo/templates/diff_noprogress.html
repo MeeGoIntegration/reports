@@ -25,7 +25,6 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
 <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
 &rsaquo; <a href="{% url opts|admin_urlname:'list' %}">{{ opts.verbose_name|capfirst }} List</a>
 &rsaquo; <a href="{% url opts|admin_urlname:'diff' new_obj.id old_obj.id %}">Compare {{ new_obj }} to {{ old_obj }}</a>
 

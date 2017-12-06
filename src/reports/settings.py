@@ -16,9 +16,6 @@ config.read([
     "local.conf",
 ])
 
-
-URL_PREFIX = config.get('web', 'url_prefix')
-
 # Change this to False when developing locally
 DEBUG = config.getboolean('base', 'debug')
 TEMPLATE_DEBUG = DEBUG

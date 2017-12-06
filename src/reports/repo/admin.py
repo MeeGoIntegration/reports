@@ -29,6 +29,7 @@ from .utils import (
     _get_latest_image, _get_svg, _graph_projects, _sort_filter_diff,
     _update_pkg_meta
 )
+from reports import admin as reports_admin
 
 
 def _deref(plat, symb):
@@ -975,17 +976,17 @@ class PackageMetaTypeAdmin(admin.ModelAdmin):
     form = PackageMetaTypeForm
 
 
-admin.site.register(RepoServer)
-admin.site.register(Platform)
-admin.site.register(Repo, RepoAdmin)
-admin.site.register(Project, ProjectAdmin)
-admin.site.register(Arch)
-admin.site.register(Note, NoteAdmin)
-admin.site.register(IssueTracker)
-admin.site.register(Image, ImageAdmin)
-admin.site.register(Graph, GraphAdmin)
-admin.site.register(Pointer, PointerAdmin)
-admin.site.register(ABI, ABIAdmin)
-admin.site.register(PackageMetaType, PackageMetaTypeAdmin)
-admin.site.register(PackageMetaChoice)
-admin.site.register(BuildService)
+reports_admin.site.register(RepoServer)
+reports_admin.site.register(Platform)
+reports_admin.site.register(Repo, RepoAdmin)
+reports_admin.site.register(Project, ProjectAdmin)
+reports_admin.site.register(Arch)
+reports_admin.site.register(Note, NoteAdmin)
+reports_admin.site.register(IssueTracker)
+reports_admin.site.register(Image, ImageAdmin)
+reports_admin.site.register(Graph, GraphAdmin)
+reports_admin.site.register(Pointer, PointerAdmin)
+reports_admin.site.register(ABI, ABIAdmin)
+reports_admin.site.register(PackageMetaType, PackageMetaTypeAdmin)
+reports_admin.site.register(PackageMetaChoice)
+reports_admin.site.register(BuildService)
