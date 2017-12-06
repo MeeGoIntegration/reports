@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.admin.sites import AdminSite
 from django.shortcuts import redirect
 from rest_framework import routers
@@ -53,6 +54,14 @@ class ReportsAdmin(AdminSite):
 
     def app_index(self, request, app_label, extra_context=None):
         return redirect('admin:index')
+
+    def index(self, request, extra_context=None):
+        if extra_context is None:
+            extra_context = {}
+        extra_context['shortcuts_template'] = settings.SHORTCUTS_TEMPLATE
+        return super(ReportsAdmin, self).index(
+            request, extra_context=extra_context
+        )
 
 
 site = ReportsAdmin(name='admin', app_name='reports')

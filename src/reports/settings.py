@@ -1,7 +1,7 @@
 # Django settings for reports project.
 import ConfigParser
 import json
-from os.path import dirname, expanduser, isdir, join
+from os.path import dirname, expanduser, isabs, isdir, isfile, join
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -111,6 +111,18 @@ TEMPLATE_LOADERS = (
     ]
     ),
 )
+
+ALLOWED_INCLUDE_ROOTS = []
+SHORTCUTS_TEMPLATE = config.get('web', 'shortcuts_template')
+if SHORTCUTS_TEMPLATE:
+    if not (isabs(SHORTCUTS_TEMPLATE) and isfile(SHORTCUTS_TEMPLATE)):
+        raise ImproperlyConfigured(
+            "SHORTCUTS_TEMPLATE '%s' is not absolute path to existing file" %
+            SHORTCUTS_TEMPLATE
+        )
+    ALLOWED_INCLUDE_ROOTS = [
+        dirname(SHORTCUTS_TEMPLATE)
+    ]
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
