@@ -41,6 +41,7 @@ setup(
     package_data={
         'reports.repo': [
             'templates/*.html',
+            'templates/admin/repo/*.html',
             'fixtures/*.yaml',
             'static/reports/css/images/*.png',
             'static/reports/css/*.css',
