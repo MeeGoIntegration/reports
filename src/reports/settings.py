@@ -87,6 +87,9 @@ STATIC_ROOT = config.get('web', 'static_root')
 # Example: "http://media.lawrence.com/static/"
 STATIC_URL = config.get('web', 'static_url')
 
+MEDIA_ROOT = config.get('web', 'media_root')
+MEDIA_URL = config.get('web', 'media_url')
+
 # Additional locations of static files
 STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
