@@ -29,6 +29,7 @@ else:
     ADMINS = []
 
 MANAGERS = ADMINS
+EMAIL_SUBJECT_PREFIX = '[Django][reports] '
 
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = config.get('base', 'secret_key')
