@@ -132,8 +132,8 @@
   {% for prj in container.prjsack %}
   <li>
     {{ prj }}
-    <a href="{{prj.buildservice.weburl}}/project/requests?project={{prj.name}}">(requests)</a>
-    <a href="{{prj.buildservice.weburl}}/project/monitor?project={{prj.name}}">(monitor)</a>
+    <a href="{{prj.buildservice.weburl}}/project/requests/{{prj.name}}">(requests)</a>
+    <a href="{{prj.buildservice.weburl}}/project/monitor/{{prj.name}}">(monitor)</a>
   </li>
   {% endfor %}
   </ul>
