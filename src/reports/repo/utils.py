@@ -14,6 +14,7 @@ from django.core.files.base import ContentFile
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils.datastructures import SortedDict
+from django.utils.safestring import mark_safe
 from osc import core
 
 import buildservice
@@ -593,8 +594,9 @@ def _creq(new_repo, old_repo, submit, delete, comment):
             comment="Automated request"
         )
         messages.append(
-            'Created <a href="%s/request/show/%s">SR#%s</a> for %s' % (
-                weburl, req.reqid, req.reqid, ", ".join(tgts))
+            mark_safe(
+                'Created <a href="%s/request/show/%s">SR#%s</a> for %s' % (
+                    weburl, req.reqid, req.reqid, ", ".join(tgts)))
         )
 
     except HTTPError, err:
