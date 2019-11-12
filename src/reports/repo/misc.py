@@ -1,9 +1,8 @@
 import datetime
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 import rpmUtils.miscutils
 import yum
-from django.utils.datastructures import SortedDict
 
 
 def _get_pkg_meta(pkg, platforms, repo_pkg_meta):
@@ -131,7 +130,7 @@ def _exclude_by_meta(pkg, meta):
 
 def _regroup_repo_packages(repo, pkgs=None, repos=None, meta=None):
     # regroup packages by leaf repo
-    packages = defaultdict(SortedDict)
+    packages = defaultdict(OrderedDict)
 
     for pkgname, repoids_pkg in repo.packages.iteritems():
         if pkgs and pkgname not in pkgs:

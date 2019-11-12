@@ -64,4 +64,4 @@ class ReportsAdmin(AdminSite):
         )
 
 
-site = ReportsAdmin(name='admin', app_name='reports')
+site = ReportsAdmin(name='admin')

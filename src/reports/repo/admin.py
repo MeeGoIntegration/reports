@@ -6,7 +6,7 @@ from collections import defaultdict
 from copy import copy
 
 from django import forms
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.conf import settings
 from django.contrib import admin, messages
 from django.core.cache import cache
@@ -158,8 +158,7 @@ class GraphAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(GraphAdmin, self).get_urls()
-        my_urls = patterns(
-            '',
+        my_urls = [
             url(r'^view/(\d+)/$',
                 self.admin_site.admin_view(self.view),
                 name="repo_graph_view"),
@@ -175,7 +174,7 @@ class GraphAdmin(admin.ModelAdmin):
             url(r'^certification/(.+)/(previous|latest|live.*)/$',
                 self.admin_site.admin_view(self.view_shortcut),
                 name="repo_view_shortcut"),
-        )
+        ]
         return my_urls + urls
 
     def view_shortcut(self, request, plat, symb):
@@ -439,12 +438,11 @@ class ABIAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(ABIAdmin, self).get_urls()
-        my_urls = patterns(
-            '',
+        my_urls = [
             url(r'^export/(.+)/$',
                 self.admin_site.admin_view(self.abi_export),
                 name="repo_abi_export"),
-        )
+        ]
         return my_urls + urls
 
     def abi_export(self, request, pk):
@@ -480,8 +478,7 @@ class RepoAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(RepoAdmin, self).get_urls()
-        my_urls = patterns(
-            '',
+        my_urls = [
             url(r'^diff/(.+)/(.+)/(.+)/$',
                 self.admin_site.admin_view(self.diff_shortcut),
                 name="repo_diff_shortcut"),
@@ -509,7 +506,7 @@ class RepoAdmin(admin.ModelAdmin):
             url(r'^list/$',
                 self.admin_site.admin_view(self.listall),
                 name="repo_repo_list"),
-        )
+        ]
         return my_urls + urls
 
     def listall(self, request):
@@ -798,8 +795,7 @@ class ImageAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(ImageAdmin, self).get_urls()
-        my_urls = patterns(
-            '',
+        my_urls = [
             url(r'^diff/(\d+)/(\d+)/$',
                 self.admin_site.admin_view(self.diff),
                 name="repo_image_diff"),
@@ -809,7 +805,7 @@ class ImageAdmin(admin.ModelAdmin):
             url(r'^list/$',
                 self.admin_site.admin_view(self.listall),
                 name="repo_image_list"),
-        )
+        ]
         return my_urls + urls
 
     def listall(self, request):

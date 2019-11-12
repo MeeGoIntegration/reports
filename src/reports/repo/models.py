@@ -12,7 +12,6 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
 from rpmUtils.miscutils import splitFilename
-from south.modelsinspector import add_introspection_rules
 
 import buildservice
 import rpmmd
@@ -27,8 +26,6 @@ try:
 except ImportError:
     # during development it is in the cwd
     from jsonfield import JSONField
-
-add_introspection_rules([], ["^reports\.jsonfield\.fields\.JSONField"])
 
 
 class Arch(models.Model):

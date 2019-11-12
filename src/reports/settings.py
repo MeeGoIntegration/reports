@@ -18,7 +18,6 @@ config.read([
 
 # Change this to False when developing locally
 DEBUG = config.getboolean('base', 'debug')
-TEMPLATE_DEBUG = DEBUG
 
 admin_emails = config.get('base', 'admin_emails')
 if admin_emails:
@@ -107,15 +106,6 @@ STATICFILES_FINDERS = (
     # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    ('django.template.loaders.cached.Loader', [
-        'django.template.loaders.filesystem.Loader',
-        'django.template.loaders.app_directories.Loader',
-    ]
-    ),
-)
-
 ALLOWED_INCLUDE_ROOTS = []
 SHORTCUTS_TEMPLATE = config.get('web', 'shortcuts_template')
 if SHORTCUTS_TEMPLATE:
@@ -140,13 +130,24 @@ ROOT_URLCONF = 'reports.urls'
 # Python dotted path to the WSGI application used by Django's runserver.
 WSGI_APPLICATION = 'reports.wsgi.application'
 
-TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or
-    # "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-    join(PROJECT_DIR, 'templates'),
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [join(PROJECT_DIR, 'templates')],
+        'APP_DIRS': False,
+        'OPTIONS': {
+            'context_processors': [
+                "django.contrib.auth.context_processors.auth",
+            ],
+            'debug': DEBUG,
+            'loaders': [ ('django.template.loaders.cached.Loader', [
+                          'django.template.loaders.filesystem.Loader',
+                          'django.template.loaders.app_directories.Loader',]
+            )],
+                
+        }
+    },
+]
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -195,7 +196,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'rest_framework',
     'reports.repo',
-    'south',
 )
 
 _cache_options = json.loads(config.get('cache', 'options'))

@@ -1,6 +1,6 @@
 import math
 import os
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from copy import copy
 from tempfile import mkstemp
 from urllib2 import HTTPError
@@ -13,7 +13,6 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from django.utils.datastructures import SortedDict
 from django.utils.safestring import mark_safe
 from osc import core
 
@@ -625,7 +624,7 @@ def _get_or_none(model, **kwargs):
 def _sort_filter_diff(diff, pkgs=None, repos=None, meta=None):
     new_diff = {}
     for action, dic in diff.items():
-        sdic = SortedDict()
+        sdic = OrderedDict()
         for key in sorted(dic.iterkeys()):
             if pkgs and not key[2] in pkgs:
                 continue
