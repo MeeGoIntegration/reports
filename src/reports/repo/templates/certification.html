@@ -29,7 +29,6 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
 <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
 </div>
 {% endblock %}
 {% endif %}
@@ -112,7 +111,7 @@
 {% else %}
 <p>
   Graph not yet created
- <a href="{% url 'admin:reports_graph_add' %}?repo={{container.id}}">Create graph for whole repo</a>
+ <a href="{% url 'admin:repo_graph_add' %}?repo={{container.id}}">Create graph for whole repo</a>
 </p>
 {% endif %}
 

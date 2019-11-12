@@ -1,22 +1,35 @@
-{% extends "admin/base_site.html" %}
+{% extends "admin/index.html" %}
 {% load i18n admin_static admin_modify %}
 {% load url from future %}
+{% load ssi from future %}
 
-{% block breadcrumbs %}
-<div class="breadcrumbs">
-<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-</div>
+{% block content_title %}{% endblock %}
+
+{% block content %}
+  {% if shortcuts_template %}
+    {% ssi shortcuts_template %}
+  {% else %}
+    <div id="content-shortcuts">
+      <h1>Shortcuts</h1>
+      <h2>Repositories</h2>
+      <ul>
+        <li><a href="/reports/repo/list/">Repository list </a></li>
+      </ul>
+      <h2>Images</h2>
+      <ul>
+        <li><a href="/reports/image/list/">Image list</a></li>
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if app_list %}
+  <h1>DB objects admin</h1>
+  {{ block.super }}
+  {% endif %}
 {% endblock %}
 
-{% block content %}<div id="content-main">
-  <h1>Report shortcuts</h1>
-  <h2>Repositories</h2>
-  <ul>
-  <li><a href="/reports/repo/list/">Repository list </a></li>
-  <li><a href="/reports/repo/view/Jolla/latest/">View latest Jolla </a></li>
-  </ul>
-  <h2>Images</h2>
-  <ul>
-  <li><a href="/reports/image/list/">Image list</a></li>
-  </ul>
-{% endblock %}
+
+{% if not app_list %}
+{% block sidebar %}{% endblock %}
+{% endif %}
+

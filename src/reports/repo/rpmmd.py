@@ -1,21 +1,26 @@
-from lxml import etree
-import urlparse
-import requests
+import fcntl
 import gzip
 import io
-import os
-import fcntl
-from collections import defaultdict, namedtuple
-from rpmUtils.miscutils import compareEVR, splitFilename, rangeCompare, stringToVersion
-from yum import i18n 
-import weakref
 import itertools
-import re
+import os
 import tempfile
+import traceback
+import urlparse
+import weakref
+from collections import defaultdict, namedtuple
+
+import requests
+from lxml import etree
+from rpmUtils.miscutils import (
+    compareEVR, rangeCompare, splitFilename, stringToVersion
+)
+from yum import i18n
+
 
 class Session(object):
     __state = {}
     _session = None
+
     def __init__(self):
         self.__dict__ = self.__state
 
@@ -24,6 +29,7 @@ class Session(object):
         if self._session is None:
             self._session = requests.Session()
         return self._session
+
 
 def fast_iter(context):
     """
@@ -45,6 +51,7 @@ def fast_iter(context):
                 del ancestor.getparent()[0]
     del context
 
+
 class RepoSack(object):
     def __init__(self, repos):
         self.repos = repos
@@ -52,11 +59,15 @@ class RepoSack(object):
 
     @property
     def base_packages(self):
-        return itertools.chain.from_iterable([repo.base_packages.viewitems() for repo in self.repos])
+        return itertools.chain.from_iterable(
+            [repo.base_packages.viewitems() for repo in self.repos]
+        )
 
     @property
     def packages(self):
-        return itertools.chain.from_iterable([repo.packages.viewitems() for repo in self.repos])
+        return itertools.chain.from_iterable(
+            [repo.packages.viewitems() for repo in self.repos]
+        )
 
     def get_ns(self, kind, nsmap):
         if kind not in self.ns:
@@ -68,22 +79,13 @@ class RepoSack(object):
         return self.ns[kind]
 
     def search_name(self, query):
-        xp = None
         for repo in self.repos:
             for name in query:
                 po = repo.packages.get(name, None)
                 if po:
                     yield (name, po)
-                
-            #for pkg in fast_iter(repo.primary_md):
-            #    if xp is None:
-            #        xp = etree.XPath("./common:name/text()", namespaces=self.get_ns("primary", pkg.nsmap), smart_strings=False)
-            #    for name in xp(pkg):
-            #        if name in query:
-            #            yield (name, Package(repo, pkg))
 
     def search_basename(self, query):
-        xp = None
         for repo in self.repos:
             for name in query:
                 po = repo.base_packages.get(name, None)
@@ -91,44 +93,26 @@ class RepoSack(object):
                     yield (name, po)
 
     def search_name_contains(self, query, casei):
-        xp = None
         if casei:
             for i, val in enumerate(query):
                 query[i] = val.lower()
 
         for name, po in self.packages:
-            if casei: name = name.lower()
+            if casei:
+                name = name.lower()
             for res in itertools.ifilter(lambda q: q in name, query):
                 yield (res, po)
 
-            #for pkg in fast_iter(repo.primary_md):
-            #    if xp is None:
-            #        xp = etree.XPath("./common:name/text()", namespaces=self.get_ns("primary", pkg.nsmap), smart_strings=False)
-            #    for name in xp(pkg):
-            #        for qs in query:
-            #            if qs.lower() in name.lower():
-            #                yield (qs, Package(repo, pkg))
-
     def search_basename_contains(self, query, casei):
-        xp = None
         if casei:
             for i, val in enumerate(query):
                 query[i] = val.lower()
 
         for name, po in self.base_packages:
-            if casei: name = name.lower()
+            if casei:
+                name = name.lower()
             for res in itertools.ifilter(lambda q: q in name, query):
                 yield (res, po)
-
-        #xp = None
-        #for repo in self.repos:
-        #    for pkg in fast_iter(repo.primary_md):
-        #        if xp is None:
-        #            xp = etree.XPath("./common:format/rpm:sourcerpm/text()", namespaces=self.get_ns("primary", pkg.nsmap), smart_strings=False)
-        #        for name in xp(pkg):
-        #            for qs in query:
-        #                if qs.lower() in name.lower():
-        #                    yield (qs, Package(repo, pkg))
 
     def search_provides(self, query):
         for repo in self.repos:
@@ -150,7 +134,11 @@ class RepoSack(object):
         for repo in self.repos:
             for pkg in fast_iter(repo.filelists_md):
                 if xp is None:
-                    xp = etree.XPath("./common:file/text()", namespaces=self.get_ns("filelists", pkg.nsmap), smart_strings=False)
+                    xp = etree.XPath(
+                        "./common:file/text()",
+                        namespaces=self.get_ns("filelists", pkg.nsmap),
+                        smart_strings=False
+                    )
                 for filename in xp(pkg):
                     if filename in query:
                         pkgnames.add(pkg.attrib['name'])
@@ -162,9 +150,11 @@ class RepoSack(object):
             if po:
                 yield po
 
-    #Yum API emulation
+    # Yum API emulation
     def returnPackages(self):
-        return itertools.chain.from_iterable([repo.packages.viewvalues() for repo in self.repos])
+        return itertools.chain.from_iterable(
+            [repo.packages.viewvalues() for repo in self.repos]
+        )
 
     def returnNewestByName(self, name=None):
         newest = {}
@@ -208,15 +198,19 @@ class RepoSack(object):
                 result.append(po)
         return result
 
-    def searchNevra(self, name=None, epoch=None, ver=None, rel=None, arch=None):
+    def searchNevra(
+        self, name=None, epoch=None, ver=None, rel=None, arch=None
+    ):
         """return list of pkgobjects matching the nevra requested"""
-        result = [ ]
+        result = []
         for po in self.returnPackages():
-            if ((name and name!=po.name) or
-               (epoch and epoch!=po.epoch) or
-               (ver and ver!=po.ver) or
-               (rel and rel!=po.rel) or
-               (arch and arch!=po.arch)):
+            if (
+                (name and name != po.name) or
+                (epoch and epoch != po.epoch) or
+                (ver and ver != po.ver) or
+                (rel and rel != po.rel) or
+                (arch and arch != po.arch)
+            ):
                 continue
             result.append(po)
         return result
@@ -233,7 +227,7 @@ class RepoSack(object):
             version = (None, None, None)
         elif type(version) in (str, type(None), unicode):
             version = stringToVersion(version)
-        result = { }
+        result = {}
         for po in self.returnPackages():
             hits = po.matchingPrcos(kind, (name, flags, version))
             if hits:
@@ -243,6 +237,7 @@ class RepoSack(object):
             for po in self.searchFiles(name):
                 result.setdefault(po, []).append(hit)
         return result
+
 
 class Repo(object):
     def __init__(self, repoid, baseurl, cachedir=None):
@@ -268,10 +263,10 @@ class Repo(object):
         self._providx = None
         self._reqidx = None
 
-        _ = self.repomd
-        _ = self.mds
-        _ = self.packages
-        #_ = self.base_packages
+        # Init cached properties
+        self.repomd
+        self.mds
+        self.packages
 
     def __repr__(self):
         return "<Repo: %s>" % self.baseurl
@@ -291,22 +286,30 @@ class Repo(object):
             self.refresh_cache()
 
         for mdfile in self.repomd.iterfind("{*}data"):
-            cached_file = os.path.join(self._cachedir, mdfile.attrib["type"] + ".xml")
+            cached_file = os.path.join(
+                self._cachedir, mdfile.attrib["type"] + ".xml")
             self._mds[mdfile.attrib["type"]] = cached_file
 
         return True
 
     def refresh_cache(self):
         for mdfile in self.repomd.iterfind("{*}data"):
-            req = Session().session.get(urlparse.urljoin(self.baseurl, mdfile.find("{*}location").attrib["href"]), verify=False)
+            req = Session().session.get(
+                urlparse.urljoin(
+                    self.baseurl, mdfile.find("{*}location").attrib["href"]
+                ),
+                verify=False
+            )
             print req.url
             if not req.status_code == requests.codes.ok:
                 req.raise_for_status()
 
             with io.BytesIO(req.content) as fd:
                 gzfd = gzip.GzipFile(fileobj=fd)
-                self.write_cache_file(mdfile.attrib["type"] + ".xml", inputfd=gzfd)
-        self.write_cache_file("repomd.xml", content=etree.tostring(self.repomd))
+                self.write_cache_file(
+                    mdfile.attrib["type"] + ".xml", inputfd=gzfd)
+        self.write_cache_file(
+            "repomd.xml", content=etree.tostring(self.repomd))
 
     def write_cache_file(self, filename, content=None, inputfd=None):
         cached_file = os.path.join(self._cachedir, filename)
@@ -321,7 +324,10 @@ class Repo(object):
     @property
     def repomd(self):
         if self._repomd is None:
-            req = Session().session.get(urlparse.urljoin(self.baseurl, "repodata/repomd.xml"), verify=False)
+            req = Session().session.get(
+                urlparse.urljoin(self.baseurl, "repodata/repomd.xml"),
+                verify=False
+            )
             print req.url
             if req.status_code == requests.codes.ok:
                 self._repomd = etree.fromstring(req.content)
@@ -348,26 +354,43 @@ class Repo(object):
 
             try:
                 self.read_cache()
-            except Exception, e:
+            except Exception:
+                traceback.print_exc()
                 self._mds = {}
 
         return self._mds
 
     @property
     def primary_md(self):
-        return etree.iterparse(self.mds["primary"], tag="{*}package", events=("end",), encoding='utf-8', recover=True)
+        return etree.iterparse(
+            self.mds["primary"],
+            tag="{*}package", events=("end",),
+            encoding='utf-8', recover=True
+        )
 
     @property
     def filelists_md(self):
-        return etree.iterparse(self.mds["filelists"], tag="{*}package", events=("end",), encoding='utf-8', recover=True)
+        return etree.iterparse(
+            self.mds["filelists"],
+            tag="{*}package", events=("end",),
+            encoding='utf-8', recover=True
+        )
 
     @property
     def other_md(self):
-        return etree.iterparse(self.mds["other"], tag="{*}package", events=("end",), encoding='utf-8', recover=True)
+        return etree.iterparse(
+            self.mds["other"],
+            tag="{*}package", events=("end",),
+            encoding='utf-8', recover=True
+        )
 
     @property
     def patterns_md(self):
-        return etree.iterparse(self.mds["patterns"], tag="{*}pattern", events=("end",), encoding='utf-8', recover=True)
+        return etree.iterparse(
+            self.mds["patterns"],
+            tag="{*}pattern", events=("end",),
+            encoding='utf-8', recover=True
+        )
 
     @property
     def patterns(self):
@@ -380,7 +403,7 @@ class Repo(object):
         if self._packages is None and 'primary' in self.mds:
             self._packages = {}
             for xml in fast_iter(self.primary_md):
-                _ = Package(weakref.proxy(self), xml)
+                Package(weakref.proxy(self), xml)
         return self._packages
 
     @property
@@ -390,7 +413,7 @@ class Repo(object):
             for po in self.packages.viewvalues():
                 self._base_packages[po.basename].append(po)
         return self._base_packages
-                
+
     @property
     def changelogs(self):
         if self._changelogs is None:
@@ -407,7 +430,12 @@ class Repo(object):
         if po:
             basename = po.basename
             if basename not in self._changelogs:
-                self._changelogs[basename] = [Changelog(entry.attrib['date'], entry.attrib['author'], entry.text) for entry in xml.iterfind("{*}changelog")]
+                self._changelogs[basename] = [
+                    Changelog(
+                        entry.attrib['date'], entry.attrib['author'],
+                        entry.text
+                    ) for entry in xml.iterfind("{*}changelog")
+                ]
 
     @property
     def provides(self):
@@ -427,15 +455,23 @@ class Repo(object):
                     self._reqidx[req.name] = po
         return self._reqidx
 
+
 Changelog = namedtuple("Changelog", ["time", "author", "text"])
 EVR = namedtuple("EVR", ["epoch", "ver", "rel"])
+
 
 class Capability(namedtuple("Capability", ["name", "flag", "EVR"])):
 
     def __str__(self):
 
         e, v, r = self.EVR
-        flags = {'GT':'>', 'GE':'>=', 'EQ':'=', 'LT':'<', 'LE':'<='}
+        flags = {
+            'GT': '>',
+            'GE': '>=',
+            'EQ': '=',
+            'LT': '<',
+            'LE': '<='
+        }
         if self.flag is None:
             return self.name
 
@@ -449,6 +485,7 @@ class Capability(namedtuple("Capability", ["name", "flag", "EVR"])):
             s += '-%s' % r
 
         return '%s %s %s' % (self.name, flags[self.flag], s)
+
 
 class Package(object):
     def __init__(self, repo, pkg):
@@ -476,7 +513,11 @@ class Package(object):
             if etree.QName(elem.tag).localname == "location":
                 self.location = elem.attrib["href"]
             elif etree.QName(elem.tag).localname == "version":
-                self.version = EVR(elem.attrib["epoch"], elem.attrib["ver"], elem.attrib["rel"])
+                self.version = EVR(
+                    elem.attrib["epoch"],
+                    elem.attrib["ver"],
+                    elem.attrib["rel"]
+                )
             elif etree.QName(elem.tag).localname == "format":
                 self.format_xml = elem
             else:
@@ -547,9 +588,17 @@ class Package(object):
         xml = self.format_xml.find("{*}%s" % kind)
         if xml is None:
             return []
-        return [Capability(entry.attrib["name"], entry.attrib.get("flags", None),
-                 EVR(entry.attrib.get("epoch", None), entry.attrib.get("ver", None),
-                  entry.attrib.get("rel", None))) for entry in xml.iterfind("{*}entry")]
+        return [
+            Capability(
+                entry.attrib["name"],
+                entry.attrib.get("flags", None),
+                EVR(
+                    entry.attrib.get("epoch", None),
+                    entry.attrib.get("ver", None),
+                    entry.attrib.get("rel", None),
+                ),
+            ) for entry in xml.iterfind("{*}entry")
+        ]
 
     @property
     def requires(self):
@@ -622,15 +671,18 @@ class Package(object):
 
     @property
     def changelog(self):
-        #if not self.basename in self.repo.changelogs:
-            #self.repo.changelogs[self.basename] = []
         return self.repo.changelogs.get(self.basename, [])
 
     @property
     def prco(self):
-        return {"provides" : self.provides, "requires" : self.requires,
-                "obsoletes" : self.obsoletes, "conflicts" : self.conflicts}
-    #RPM object emulation
+        return {
+            "provides": self.provides,
+            "requires": self.requires,
+            "obsoletes": self.obsoletes,
+            "conflicts": self.conflicts,
+        }
+
+    # RPM object emulation
     @property
     def base_package_name(self):
         return self.basename
@@ -641,7 +693,11 @@ class Package(object):
 
     @property
     def files(self):
-        return { "files" : self.filelist, "dir" : self.dirs, "ghost" : self.ghosts}
+        return {
+            "files": self.filelist,
+            "dir": self.dirs,
+            "ghost": self.ghosts
+        }
 
     def verCMP(self, other):
         return compareEVR(self.version, other.version)
@@ -669,7 +725,6 @@ class Package(object):
                     v = self.ver
                 if r is None:
                     r = self.rel
-                #(e, v, r) = (self.epoch, self.ver, self.rel)
 
             matched = rangeCompare(
                 reqtuple, (n, f, (e, v, r)))
@@ -678,9 +733,9 @@ class Package(object):
 
         return result
 
+
 class Patterns(object):
     def __init__(self, patxml):
-        attrs = ["version", "summary", "description", "category", "requires"]
         self._items = {}
         for xml in fast_iter(patxml):
             self._xml_to_pat(xml)
@@ -692,19 +747,34 @@ class Patterns(object):
             name = patxml.find("{%s}%s" % (ns, "name")).text
             vertag = patxml.find("{%s}%s" % (ns, "version"))
             version = (None, None)
-            if not vertag is None:
-                version = (vertag.attrib.get("ver", None), vertag.attrib.get("rel", None))
+            if vertag is not None:
+                version = (
+                    vertag.attrib.get("ver", None),
+                    vertag.attrib.get("rel", None)
+                )
             summary = patxml.find("{%s}%s" % (ns, "summary")).text
             description = patxml.find("{%s}%s" % (ns, "description")).text
             reqtag = patxml.find("{%s}%s" % (nsrpm, "requires"))
             requires = []
-            if not reqtag is None:
-                requires = [ entry.attrib["name"] for entry in reqtag.findall("{%s}%s" % (nsrpm, "entry")) ]
+            if reqtag is not None:
+                requires = [
+                    entry.attrib["name"]
+                    for entry in reqtag.findall("{%s}%s" % (nsrpm, "entry"))
+                ]
             provtag = patxml.find("{%s}%s" % (nsrpm, "provides"))
             provides = []
-            if not provtag is None:
-                provides = [ entry.attrib["name"] for entry in provtag.findall("{%s}%s" % (nsrpm, "entry")) ]
-            self._items[name] = { "version" : version, "summary" : summary, "description" : description, "requires" : requires, "provides" : provides }
+            if provtag is not None:
+                provides = [
+                    entry.attrib["name"]
+                    for entry in provtag.findall("{%s}%s" % (nsrpm, "entry"))
+                ]
+            self._items[name] = {
+                "version": version,
+                "summary": summary,
+                "description": description,
+                "requires": requires,
+                "provides": provides
+            }
 
     @property
     def count(self):
@@ -721,4 +791,3 @@ class Patterns(object):
     @items.setter
     def items(self, value):
         self._items = value
-            

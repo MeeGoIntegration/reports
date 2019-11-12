@@ -38,7 +38,6 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
 <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
 &rsaquo; <a href="{% url opts|admin_urlname:'list' %}">{{ opts.verbose_name|capfirst }} List</a>
 </div>
 {% endblock %}
@@ -55,7 +54,7 @@ var req = false;
 progressbar.progressbar({
   value: false
 });
-var get_progress = setInterval(function(){ 
+var get_progress = setInterval(function(){
   req = $.getJSON("{% url opts|admin_urlname:'diff_progress' progress_id %}", function( json ) {
     var value = json["{{ progress_id}}"];
     if ( $.isNumeric( value ) ) {
@@ -65,9 +64,9 @@ var get_progress = setInterval(function(){
       progressbar.progressbar( "value", false );
       progressLabel.text( value );
     };
-  }); 
+  });
 }, 1000);
-$.get("{{ request.path }}?progress_id={{ progress_id }}{% if do_regen %}&do_regen=1{% endif %}", function( data ) { 
+$.get("{{ request.path }}?progress_id={{ progress_id }}{% if do_regen %}&do_regen=1{% endif %}", function( data ) {
   clearInterval(get_progress);
   if ( req ) {
     req.abort();

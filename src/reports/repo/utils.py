@@ -1,33 +1,28 @@
-import os
-import urlparse
-from urllib2 import HTTPError
-import datetime
-from copy import copy
-from tempfile import mkstemp 
-import re
 import math
-from collections import OrderedDict, defaultdict
-from django.core.exceptions import ObjectDoesNotExist
-from django.utils.datastructures import SortedDict
-from django.db.models.signals import post_save, pre_save
-from django.dispatch import receiver
-from django.core.files import File
-from django.core.files.base import ContentFile
-from django.core.exceptions import ObjectDoesNotExist
+import os
+from collections import defaultdict
+from copy import copy
+from tempfile import mkstemp
+from urllib2 import HTTPError
 
 import pydot
 import yum
-from rpmUtils.miscutils import compareEVR
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.files import File
+from django.core.files.base import ContentFile
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
+from django.utils.datastructures import SortedDict
+from osc import core
 
-from models import Graph, Repo, Arch, Image, PackageMetaType, PackageMetaChoice, Project
+import buildservice
 
-from misc import _find_repo_by_id, _fmt_chlog, _get_pkg_meta, _find_comparable_component, _exclude_by_meta, _find_unmet_reqs
-
-try:
-    import reports.settings as settings
-except ImportError:
-    # during development it is in the cwd
-    import settings
+from .misc import (
+    _exclude_by_meta, _find_comparable_component, _find_unmet_reqs, _fmt_chlog,
+    _get_pkg_meta
+)
+from .models import Arch, Graph, Image, PackageMetaType, Repo
 
 try:
     from lxml import etree
@@ -37,49 +32,57 @@ except ImportError:
     except ImportError:
         import xml.etree.ElementTree as etree
 
-import buildservice
-import pickle
-from osc import core
 
-__all__ =  ["_diff_sacks", "_get_trace", "_get_svg",
-            "_graph_projects", "_creq", "_get_dot",
-            "_get_latest_image", "_find_previous_pkg_meta",
-            "_update_pkg_meta", "_sort_filter_diff",
-            "_get_filter_meta"]
+__all__ = [
+    "_diff_sacks", "_get_trace", "_get_svg", "_graph_projects", "_creq",
+    "_get_dot", "_get_latest_image", "_find_previous_pkg_meta",
+    "_update_pkg_meta", "_sort_filter_diff", "_get_filter_meta"
+]
+
 
 def _get_latest_image(platform_name='Jolla'):
-    images = sorted(Image.objects.select_related("container_repo").prefetch_related("container_repo__platform").all(), key=lambda image: image.release, reverse=True)
-  
+    images = sorted(
+        Image.objects.select_related("container_repo")
+        .prefetch_related("container_repo__platform").all(),
+        key=lambda image: image.release,
+        reverse=True,
+    )
+
     for img in images:
         if img.platform.name == platform_name:
             return img
     return None
+
 
 def _find_previous_pkg_meta(graph):
     repo = graph.repo.get()
     if not repo:
         return None
     plat = repo.platform.name
-    #repos from the same platform
-    repos = Repo.objects.filter(platform__name = plat).exclude(release_date = None).order_by('-release')
+    # repos from the same platform
+    repos = Repo.objects.filter(platform__name=plat)\
+        .exclude(release_date=None).order_by('-release')
     for r in repos:
         if r.graph_set.count() > 0:
             r_graph = r.graph_set.all()[0]
-        else: continue
+        else:
+            continue
         # return first that has pkg_meta set
         if r_graph.pkg_meta:
             return r_graph.pkg_meta
-        else: continue
+        else:
+            continue
 
     return None
+
 
 def _update_pkg_meta(graph, container, img=None):
     old_pkgs = {}
     new_pkgs = {}
-    if img: img_packages = img.packages
 
     for p in graph.pkg_meta.keys():
-        if p == 'img': continue #skip img info
+        if p == 'img':
+            continue  # skip img info
         old_pkgs[p] = graph.pkg_meta[p].keys()
 
     if container.components.count() == 0:
@@ -87,12 +90,17 @@ def _update_pkg_meta(graph, container, img=None):
     else:
         for p in container.components.all():
             if p.is_live and p.projects.count() == 1:
-                new_pkgs[str(p.platform) + " " + str(p.projects.all()[0])] = p.packages
+                new_pkgs[
+                    str(p.platform) + " " + str(p.projects.all()[0])
+                ] = p.packages
             else:
                 new_pkgs[str(p.platform)] = p.packages
 
     for repo in old_pkgs.keys():
-        if repo in new_pkgs and set(new_pkgs[repo].keys()) ^ set(old_pkgs[repo]):
+        if (
+            repo in new_pkgs and
+            set(new_pkgs[repo].keys()) ^ set(old_pkgs[repo])
+        ):
             added_pkgs = set(new_pkgs[repo].keys()) - set(old_pkgs[repo])
             removed_pkgs = set(old_pkgs[repo]) - set(new_pkgs[repo].keys())
 
@@ -107,9 +115,12 @@ def _update_pkg_meta(graph, container, img=None):
                     if mtype.allow_multiple:
                         graph.pkg_meta[repo][pkg][mtype.name] = {}
                         for choice in mchoices:
-                            graph.pkg_meta[repo][pkg][mtype.name].update({ choice.name: False })
+                            graph.pkg_meta[repo][pkg][mtype.name].update(
+                                {choice.name: False}
+                            )
                     elif mtype.default:
-                        graph.pkg_meta[repo][pkg][mtype.name] = mtype.default.name
+                        graph.pkg_meta[repo][pkg][mtype.name] = \
+                                mtype.default.name
                     # initalize as empty string by default
                     else:
                         graph.pkg_meta[repo][pkg][mtype.name] = ""
@@ -119,29 +130,42 @@ def _update_pkg_meta(graph, container, img=None):
                 del graph.pkg_meta[repo][pkg]
     graph.save()
 
+
 def _get_submit_reqs(new_prjs, old_prjs):
 
-    reqs = {"incoming" : [], "in progress" : [], "outgoing" : []}
+    reqs = {
+        "incoming": [],
+        "in progress": [],
+        "outgoing": [],
+    }
     for apiurl, prjs in new_prjs:
         bs = buildservice.BuildService(apiurl=str(apiurl))
         actions = ["(action/target/@project='%s'" % prj for prj in prjs]
-        reqs["incoming"] = core.search(bs.apiurl, request = "(state/@name='new' or state/@name='review') and %s)" % "or".join(actions))
+        reqs["incoming"] = core.search(
+            bs.apiurl,
+            request="(state/@name='new' or state/@name='review') and %s)" %
+            "or".join(actions)
+        )
 
     for apiurl, prjs in old_prjs:
         bs = buildservice.BuildService(apiurl=str(apiurl))
         actions = ["(action/source/@project='%s'" % prj for prj in prjs]
-        reqs["outgoing"] = core.search(bs.apiurl, request = "(state/@name='new' or state/@name='review') and %s)" % "or".join(actions))
+        reqs["outgoing"] = core.search(
+            bs.apiurl,
+            request="(state/@name='new' or state/@name='review') and %s)" %
+            "or".join(actions)
+        )
 
-
-    #reqs = bs.getSubmitRequests("accepted", old_repo_ts, new_repo_ts, list(projects))
     return reqs
+
 
 def _find_projects(repo):
     prjs_by_apiurl = defaultdict(set)
     if repo.is_live:
         for prj in repo.prjsack:
-            prjs_by_apiurl[prj.apiurl].add(prj) 
+            prjs_by_apiurl[prj.apiurl].add(prj)
     return prjs_by_apiurl
+
 
 def _get_trace(old_repo, new_repo):
 
@@ -151,6 +175,7 @@ def _get_trace(old_repo, new_repo):
 
     return dict(reqs)
 
+
 # lifted from repo-graph from yum-utils
 def _get_dot(repos, img, pacs, depth, direction):
 
@@ -159,8 +184,8 @@ def _get_dot(repos, img, pacs, depth, direction):
         sack.addList(repo.yumsack.returnPackages())
 
     dot = [
-    'digraph packages {',
-    """
+        'digraph packages {',
+        """
     size="45,50";
     center="true";
     rankdir="TB";
@@ -170,8 +195,9 @@ def _get_dot(repos, img, pacs, depth, direction):
     overlap="false";
     ratio="compress";
     splines="true";
-    """]
-    
+    """
+    ]
+
     maxdeps = 0
     if pacs and direction == 2:
         deps = _get_deps(sack, img, pacs, depth, 0)
@@ -180,18 +206,18 @@ def _get_dot(repos, img, pacs, depth, direction):
             temp[pac] = copy(deps[pac])
         deps.update(_get_deps(sack, img, pacs, depth, 1))
         for pac in pacs:
-            deps[pac].extend( temp[pac] )
+            deps[pac].extend(temp[pac])
     else:
         deps = _get_deps(sack, img, pacs, depth, direction)
 
     for pkg in deps.keys():
         if len(deps[pkg]) > maxdeps:
-            maxdeps=len(deps[pkg])
+            maxdeps = len(deps[pkg])
 
-        # color calculations lifted from rpmgraph 
-        h=0.5+(0.6/23*len(deps[pkg]))
-        s=h+0.1
-        b=1.0
+        # color calculations lifted from rpmgraph
+        h = 0.5+(0.6/23*len(deps[pkg]))
+        s = h+0.1
+        b = 1.0
 
         dot.append('"%s" [color="%s %s %s"];' % (pkg, h, s, b))
         dot.append('"%s" -> {' % pkg)
@@ -204,7 +230,7 @@ def _get_dot(repos, img, pacs, depth, direction):
 
 # lifted from repo-graph from yum-utils
 def _get_deps(sack, img, pacs, depth, direction):
-    requires={}
+    requires = {}
     skip = ["glibc", "gcc", "rpm", "libgcc", "rpmlib", "libstdc++"]
 
     if direction == 1:
@@ -214,11 +240,12 @@ def _get_deps(sack, img, pacs, depth, direction):
         prco = "requires"
         xprco = "provides"
 
-    def _get_requires(pkg): 
+    def _get_requires(pkg):
         xx = {}
         for r in pkg.returnPrco(prco):
             reqname = str(r[0])
-            if reqname in skip: continue
+            if reqname in skip:
+                continue
             provider = sack.searchPrco(reqname, xprco)
             if not provider:
                 continue
@@ -227,7 +254,7 @@ def _get_deps(sack, img, pacs, depth, direction):
                     xx[p.name] = None
                 if p.name in xx or p.name in skip:
                     continue
-                if img and not p.name in img.bpkgs:
+                if img and p.name not in img.bpkgs:
                     continue
                 else:
                     xx[p.name] = None
@@ -241,8 +268,10 @@ def _get_deps(sack, img, pacs, depth, direction):
             start = sack.searchNevra(name=pac, arch="armv7hl")
             while count < depth:
                 for pkg in start:
-                    if img and not pkg.name in img.bpkgs: continue
-                    if pkg.name in skip: continue
+                    if img and pkg.name not in img.bpkgs:
+                        continue
+                    if pkg.name in skip:
+                        continue
 
                     requires[pkg.name] = _get_requires(pkg)
 
@@ -251,15 +280,18 @@ def _get_deps(sack, img, pacs, depth, direction):
                         start.extend(sack.searchNevra(name=n, arch="armv7hl"))
                         start.extend(sack.searchNevra(name=n, arch="noarch"))
                 count += 1
-    
+
     else:
         for pkg in sack.returnPackages():
-            if img and pkg.name not in img.bpkgs: continue
-            if pkg.name in skip: continue
+            if img and pkg.name not in img.bpkgs:
+                continue
+            if pkg.name in skip:
+                continue
 
             requires[pkg.name] = _get_requires(pkg)
 
     return requires
+
 
 def _get_svg(dot, prog="neato"):
     _, svg_name = mkstemp()
@@ -268,30 +300,46 @@ def _get_svg(dot, prog="neato"):
     dot_graph.write_svg(svg_name, prog=prog)
     return svg_name
 
+
 @receiver(pre_save)
 def _graph_pre_save(sender, **kwargs):
     if sender.__name__ == "Graph" and not kwargs['raw']:
         graph = kwargs["instance"]
-        if graph.dot and os.path.exists(os.path.join(settings.MEDIA_ROOT, graph.dot.name)):
-            old_graph = _get_or_none(Graph, pk = graph.id)
-            if old_graph \
-            and old_graph.dot \
-            and old_graph.direction == graph.direction \
-            and old_graph.depth == graph.depth \
-            and old_graph.packages == graph.packages \
-            and old_graph.image == graph.image \
-            and [ x.id for x in old_graph.repo.all() ] == [ x.id for x in graph.repo.all() ]:
+        if graph.dot and os.path.exists(
+            os.path.join(settings.MEDIA_ROOT, graph.dot.name)
+        ):
+            old_graph = _get_or_none(Graph, pk=graph.id)
+            if (
+                old_graph and old_graph.dot and
+                old_graph.direction == graph.direction and
+                old_graph.depth == graph.depth and
+                old_graph.packages == graph.packages and
+                old_graph.image == graph.image and
+                [x.id for x in old_graph.repo.all()] == [
+                    x.id for x in graph.repo.all()]
+            ):
                 return
             else:
                 os.remove(os.path.join(settings.MEDIA_ROOT, graph.dot.name))
-                if old_graph and old_graph.svg and os.path.exists(os.path.join(settings.MEDIA_ROOT, graph.svg.name)):
-                    os.remove(os.path.join(settings.MEDIA_ROOT, graph.svg.name))
+                if (
+                    old_graph and old_graph.svg and
+                    os.path.exists(
+                        os.path.join(settings.MEDIA_ROOT, graph.svg.name)
+                    )
+                ):
+                    os.remove(
+                        os.path.join(settings.MEDIA_ROOT, graph.svg.name)
+                    )
+
 
 @receiver(post_save)
 def _graph_post_save(sender, **kwargs):
     if sender.__name__ == "Graph":
         graph = kwargs["instance"]
-        if graph.dot and os.path.exists(os.path.join(settings.MEDIA_ROOT, graph.dot.name)):
+        if (
+            graph.dot and
+            os.path.exists(os.path.join(settings.MEDIA_ROOT, graph.dot.name))
+        ):
             print "already exists"
             return
         if graph.image:
@@ -304,12 +352,21 @@ def _graph_post_save(sender, **kwargs):
 
         packages = None
         if graph.packages:
-            packages = [ p.strip() for p in graph.packages.split(",") ]
+            packages = [p.strip() for p in graph.packages.split(",")]
 
-        graph.dot.save("%s.dot" % graph.id, ContentFile(_get_dot(repos, graph.image, packages, graph.depth, graph.direction)))
+        graph.dot.save(
+            "%s.dot" % graph.id,
+            ContentFile(
+                _get_dot(
+                    repos, graph.image, packages, graph.depth, graph.direction
+                )
+            )
+        )
+
 
 def _get_project(bs, project):
     return etree.fromstring(bs.getProjectMeta(project))
+
 
 def _get_project_dot(apiurl, projectname, done, cache):
     if projectname in done:
@@ -327,19 +384,29 @@ def _get_project_dot(apiurl, projectname, done, cache):
 
     dot = []
     for repository in project.iter('repository'):
-        parent_node = '"%s~%s"' % (project.attrib['name'], repository.attrib['name'])
+        parent_node = '"%s~%s"' % (
+            project.attrib['name'], repository.attrib['name']
+        )
 
         for child in repository:
             if child.tag == "arch":
                 arch = child.text
-                dot.append( parent_node + ' [label="%s\\n%s\\n%s"];' % (project.attrib['name'], repository.attrib['name'], arch))
+                dot.append(
+                    parent_node + ' [label="%s\\n%s\\n%s"];' % (
+                        project.attrib['name'],
+                        repository.attrib['name'],
+                        arch
+                    )
+                )
             elif child.tag == "path":
                 dep_project = child.attrib['project']
-                dep_repository = child.attrib['repository']
                 dot.extend(_get_project_dot(apiurl, dep_project, done, cache))
-                child_node = '"%s~%s"' % (child.attrib['project'], child.attrib['repository'])
+                child_node = '"%s~%s"' % (
+                    child.attrib['project'], child.attrib['repository']
+                )
                 dot.append("%s -> %s;" % (parent_node, child_node))
     return dot
+
 
 def _get_projects_dot(apiurl, projects):
     done = set()
@@ -352,26 +419,36 @@ def _get_projects_dot(apiurl, projects):
     dot.append("}")
     return dot
 
+
 def _graph_projects(platform, prjsack):
     projects = set()
     prjids = set()
     for prj in prjsack:
         projects.add(prj.name)
         prjids.add(str(prj.id))
-    projects = sorted(projects) 
+    projects = sorted(projects)
     prjids = sorted(prjids)
-    dotfilename =  os.path.join(settings.MEDIA_ROOT, "graph", "%s_%s.dot" % (str(platform.id), "_".join(prjids)))
+    dotfilename = os.path.join(
+        settings.MEDIA_ROOT, "graph", "%s_%s.dot" % (
+            str(platform.id), "_".join(prjids)
+        )
+    )
     graph = _get_or_none(Graph, dot=dotfilename)
     if not graph:
         graph = Graph(direction=0)
     dot = _get_projects_dot(prj.buildservice.apiurl, projects)
     graph.dot.save(dotfilename, ContentFile(str("\n".join(dot))), save=False)
     svg = _get_svg(dotfilename, prog="dot")
-    graph.svg.save(dotfilename.replace(".dot",".svg"), File(open(svg)), save=False)
+    graph.svg.save(
+        dotfilename.replace(".dot", ".svg"),
+        File(open(svg)),
+        save=False
+    )
 
     graph.save()
     os.unlink(svg)
     return graph
+
 
 def _find_obs_pkg(bs, pkg, src_project):
     # probably OBS package name is different from src rpm name
@@ -380,11 +457,12 @@ def _find_obs_pkg(bs, pkg, src_project):
     path = 'published/binary/id'
     # search predicate
     predicate = "(@name = '%s') and path/@project='%s'" % (pkg, src_project)
-    kwa = { path : predicate }
+    kwa = {path: predicate}
     print kwa
     # osc search function wants keyword args
-    result = core.search(bs.apiurl, **kwa )
-    # obs search will return results from subprojects as well, so filter further
+    result = core.search(bs.apiurl, **kwa)
+    # obs search will return results from subprojects as well,
+    # so filter further
     filtered = result[path].findall("./binary[@project='%s']" % (src_project))
     if filtered:
         # extract the first package name
@@ -392,18 +470,24 @@ def _find_obs_pkg(bs, pkg, src_project):
         return pkg
     else:
 
-        predicate = "(contains(@name , '%s')) and path/@project='%s'" % (pkg, src_project)
-        kwa = { path : predicate }
+        predicate = "(contains(@name , '%s')) and path/@project='%s'" % (
+            pkg, src_project
+        )
+        kwa = {path: predicate}
         print kwa
         # osc search function wants keyword args
-        result = core.search(bs.apiurl, **kwa )
-        # obs search will return results from subprojects as well, so filter further
-        filtered = result[path].findall("./binary[@project='%s']" % (src_project))
+        result = core.search(bs.apiurl, **kwa)
+        # obs search will return results from subprojects as well,
+        # so filter further
+        filtered = result[path].findall(
+            "./binary[@project='%s']" % src_project
+        )
         if filtered:
             pkg = filtered[0].attrib['package']
             return pkg
         else:
             return None
+
 
 def _find_promotion_target(prj, prjsack, reverse=True):
     ranked = {}
@@ -418,6 +502,7 @@ def _find_promotion_target(prj, prjsack, reverse=True):
         return ranked[rank[0]]
     else:
         return False
+
 
 def _creq(new_repo, old_repo, submit, delete, comment):
     messages = []
@@ -434,33 +519,40 @@ def _creq(new_repo, old_repo, submit, delete, comment):
         src_prj = src_repo.prjsack[0]
         src_prj_pkgs = bs.getPackageList(str(src_prj.name))
 
-        #tgt_prj = _find_promotion_target(src_prj, old_prjsack)
         tgt_prj = src_prj.request_target
-        if not tgt_prj or not tgt_prj in old_prjsack:
+        if not tgt_prj or tgt_prj not in old_prjsack:
             try:
                 tgt_prj = src_prj.request_source.get()
             except ObjectDoesNotExist:
                 tgt_prj = None
 
-        if not tgt_prj or not tgt_prj in old_prjsack:
-            messages.append("No target project for SR from %s to %s" % (src_prj, old_repo))
+        if not tgt_prj or tgt_prj not in old_prjsack:
+            messages.append(
+                "No target project for SR from %s to %s" % (src_prj, old_repo)
+            )
             continue
 
         tgt_prj_pkgs = bs.getPackageList(str(tgt_prj.name))
 
-        if not pkg in src_prj_pkgs:
+        if pkg not in src_prj_pkgs:
             print pkg
             print src_prj
             pkg = _find_obs_pkg(bs, pkg, src_prj.name)
             if not pkg:
-                messages.append("OBS package for %s was not found in %s" % (pkg, src_prj))
+                messages.append(
+                    "OBS package for %s was not found in %s" % (pkg, src_prj)
+                )
                 continue
 
-        options[tgt_prj.name].append({'action': "submit",
-                                 'src_project': src_prj.name,
-                                 'src_package': pkg,
-                                 'tgt_project': tgt_prj.name,
-                                 'tgt_package': pkg})
+        options[tgt_prj.name].append(
+            {
+                'action': "submit",
+                'src_project': src_prj.name,
+                'src_package': pkg,
+                'tgt_project': tgt_prj.name,
+                'tgt_package': pkg,
+            }
+        )
 
     for pkg_repoid in delete:
         pkg, repoid = pkg_repoid.split("@")
@@ -469,16 +561,22 @@ def _creq(new_repo, old_repo, submit, delete, comment):
         tgt_prj = tgt_repo.prjsack[0]
         tgt_prj_pkgs = bs.getPackageList(tgt_prj.name)
 
-        if not pkg in tgt_prj_pkgs:
+        if pkg not in tgt_prj_pkgs:
             pkg = _find_obs_pkg(bs, pkg, tgt_prj.name)
             if not pkg:
-                messages.append("OBS package for %s was not found in %s" % (pkg, tgt_prj.name))
+                messages.append(
+                    "OBS package for %s was not found in %s" % (
+                        pkg, tgt_prj.name)
+                )
                 continue
 
-        options[tgt_prj.name].append({'action': "delete",
-                                 'tgt_project': tgt_prj.name,
-                                 'tgt_package': pkg})
-
+        options[tgt_prj.name].append(
+            {
+                'action': "delete",
+                'tgt_project': tgt_prj.name,
+                'tgt_package': pkg,
+            }
+        )
     print options
     all_actions = []
     tgts = []
@@ -489,16 +587,24 @@ def _creq(new_repo, old_repo, submit, delete, comment):
     messages = []
     errors = []
     try:
-        req = bs.createRequest(options_list = all_actions,
-                               description = comment,
-                               comment = "Automated request")
-        messages.append('Created <a href="%s/request/show/%s">SR#%s</a> for %s' % (weburl, req.reqid, req.reqid, ", ".join(tgts)))
+        req = bs.createRequest(
+            options_list=all_actions,
+            description=comment,
+            comment="Automated request"
+        )
+        messages.append(
+            'Created <a href="%s/request/show/%s">SR#%s</a> for %s' % (
+                weburl, req.reqid, req.reqid, ", ".join(tgts))
+        )
 
     except HTTPError, err:
         status = etree.fromstring(err.read())
-        errors.append("Error while creating request: %s" % (status.find(("summary")).text))
+        errors.append(
+            "Error while creating request: %s" % status.find(("summary")).text
+        )
 
     return messages, errors
+
 
 def _get_or_other(model, **kwargs):
     try:
@@ -506,11 +612,13 @@ def _get_or_other(model, **kwargs):
     except ObjectDoesNotExist:
         return "Other"
 
+
 def _get_or_none(model, **kwargs):
     try:
         return model.objects.get(**kwargs)
     except ObjectDoesNotExist:
         return None
+
 
 def _sort_filter_diff(diff, pkgs=None, repos=None, meta=None):
     new_diff = {}
@@ -529,6 +637,7 @@ def _sort_filter_diff(diff, pkgs=None, repos=None, meta=None):
         new_diff[action] = sdic
     return new_diff
 
+
 def _diff_chlog(oldlogs, newlogs):
 
     newlog = _fmt_chlog(newlogs)
@@ -537,7 +646,7 @@ def _diff_chlog(oldlogs, newlogs):
     skip = False
     for line in newlog:
         if line.startswith("*"):
-            if not line in oldlog:
+            if line not in oldlog:
                 chlog.append(line)
                 skip = False
             else:
@@ -545,9 +654,10 @@ def _diff_chlog(oldlogs, newlogs):
                 continue
         else:
             if not skip:
-              chlog.append(line)
+                chlog.append(line)
 
     return chlog
+
 
 def _diff_sacks(newrepo, oldrepo, progress_cb):
 
@@ -556,7 +666,7 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
     oldprjsack = oldrepo.prjsack
 
     repo_pkg_meta = newrepo.pkg_meta
-    platforms = set( repo.platform.name for repo in newrepo.comps )
+    platforms = set(repo.platform.name for repo in newrepo.comps)
     platforms.add(newrepo.platform.name)
 
     # key_tuple = ( repo id, repo string, pkg base name )
@@ -564,16 +674,22 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
     added = defaultdict(dict)
     # { key_tuple : set[] }
     removed = defaultdict(set)
-    # { key_tuple : { ovr : old version , oa : old arch , nvr : new version , na : new arch , chlo : changelog diff } }
+    # { key_tuple : {
+    #       ovr : old version ,
+    #       oa : old arch ,
+    #       nvr : new version ,
+    #       na : new arch ,
+    #       chlo : changelog diff
+    #   }
+    # }
     modified = {}
 
     obsoleted = {}
     obsoletes = {}
 
-    ARCHS = set([ str(x) for x in Arch.objects.all() ])
+    ARCHS = set([str(x) for x in Arch.objects.all()])
     ARCHS.add("src")
-    #toskip = set([ "debuginfo", "debugsource", "devel", "tests" ])
-    toskip = set([ "debuginfo", "debugsource" ])
+    toskip = set(["debuginfo", "debugsource"])
 
     # first go through the new repo collection
     repoids = {}
@@ -593,7 +709,7 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
         project = None
         if repo.is_live and len(prjsack) == 1:
             project = prjsack[0].request_target
-            if not project or not project in oldprjsack:
+            if not project or project not in oldprjsack:
                 try:
                     project = prjsack[0].request_source.get()
                 except ObjectDoesNotExist:
@@ -604,22 +720,23 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
             else:
                 project = None
 
-        old_comparable = _find_comparable_component(repo, oldrepo, project=project)
+        old_comparable = _find_comparable_component(
+            repo, oldrepo, project=project)
 
         if old_comparable:
             old_comparable = old_comparable.yumsack
         else:
             old_comparable = oldrepo.yumsack
 
-        pkgs = [] 
+        pkgs = []
         if is_livediff:
             pkgs = repo.yumsack.returnPackages()
         else:
             pkgs = repo.yumsack.returnNewestByName()
 
-        for pkg in pkgs: 
+        for pkg in pkgs:
             # skip archs we don't care about
-            if not pkg.arch in ARCHS:
+            if pkg.arch not in ARCHS:
                 continue
 
             # skip debuginfo and debugsource rpms
@@ -627,20 +744,16 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
             if suffix in toskip:
                 continue
 
-            key_tuple = ( repo.id, repo_str, pkg.base_package_name )
-            nvr = "%s - %s-%s" % ( pkg.name, pkg.ver, pkg.rel)
+            key_tuple = (repo.id, repo_str, pkg.base_package_name)
+            nvr = "%s - %s-%s" % (pkg.name, pkg.ver, pkg.rel)
 
             oldpkgs = list(old_comparable.searchNames(pkg.name))
-            oldpkgs.sort(cmp=lambda x,y: x.verCMP(y), reverse=True)
+            oldpkgs.sort(cmp=lambda x, y: x.verCMP(y), reverse=True)
             oldpkgs = oldpkgs[:1]
 
             for oldpkg in oldpkgs:
-                #if not oldpkg.arch in ARCHS:
-                #    continue
-                #if not pkg.arch == oldpkg.arch and ( not pkg.arch == "noarch" or not oldpkg.arch == "noarch" ):
-                #    continue
 
-                if not key_tuple in modified:
+                if key_tuple not in modified:
                     # check for a change in version or release number
                     if not pkg.ver == oldpkg.ver or not pkg.rel == oldpkg.rel:
                         # get new changelog entries
@@ -650,32 +763,48 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
                         if len(chlog) or not pkg.ver == oldpkg.ver:
                             if not len(chlog):
                                 chlog.append("No new changelog entries!")
-                            modified.update({ key_tuple : { "sense" : "Updated" if pkg.verCMP(oldpkg) == 1 else "Reverted",
-                                                            "ovr" : "%s-%s" % (oldpkg.ver, oldpkg.rel),
-                                                            "oa"  : oldpkg.arch,
-                                                            "nvr" : "%s-%s" % (pkg.ver, pkg.rel),
-                                                            "na"  : pkg.arch,
-                                                            "ba"  : set(),
-                                                            "br"  : set(),
-                                                            "chlo" : chlog,
-                                                            "meta" : _get_pkg_meta(pkg.base_package_name, platforms, repo_pkg_meta),
-                                                            "unmet_reqs" : set()
-                                                        }})
+                            modified.update({
+                                key_tuple: {
+                                    "sense": "Updated"
+                                    if pkg.verCMP(oldpkg) == 1 else "Reverted",
+                                    "ovr": "%s-%s" % (oldpkg.ver, oldpkg.rel),
+                                    "oa": oldpkg.arch,
+                                    "nvr": "%s-%s" % (pkg.ver, pkg.rel),
+                                    "na": pkg.arch,
+                                    "ba": set(),
+                                    "br": set(),
+                                    "chlo": chlog,
+                                    "meta": _get_pkg_meta(
+                                        pkg.base_package_name, platforms,
+                                        repo_pkg_meta),
+                                    "unmet_reqs": set()
+                                }
+                            })
 
                 if key_tuple in modified:
-                    modified[key_tuple]["unmet_reqs"].update(_find_unmet_reqs(pkg, repo.yumsack, oldsack = old_comparable))
+                    modified[key_tuple]["unmet_reqs"].update(
+                        _find_unmet_reqs(
+                            pkg, repo.yumsack,
+                            oldsack=old_comparable
+                        )
+                    )
 
                 # we don't need to look further
                 break
 
             if not len(oldpkgs):
-                if not key_tuple in added:
+                if key_tuple not in added:
                     added[key_tuple]["binaries"] = set()
                     added[key_tuple]["chlog"] = _fmt_chlog(pkg.changelog)
-                    added[key_tuple]["meta"] = _get_pkg_meta(pkg.base_package_name, platforms, repo_pkg_meta)
+                    added[key_tuple]["meta"] = _get_pkg_meta(
+                        pkg.base_package_name, platforms, repo_pkg_meta)
                     added[key_tuple]["unmet_reqs"] = set()
                 added[key_tuple]["binaries"].add(nvr)
-                added[key_tuple]["unmet_reqs"].update(_find_unmet_reqs(pkg, repo.yumsack, oldsack = old_comparable))
+                added[key_tuple]["unmet_reqs"].update(
+                    _find_unmet_reqs(
+                        pkg, repo.yumsack, oldsack=old_comparable
+                    )
+                )
 
                 if pkg.obsoletes:
                     obsoletes[nvr] = pkg.obsoletes
@@ -702,7 +831,7 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
         project = None
         if repo.is_live and len(prjsack) == 1:
             try:
-                project = prjsack[0].request_source.get() 
+                project = prjsack[0].request_source.get()
             except ObjectDoesNotExist:
                 project = prjsack[0].request_target
 
@@ -711,7 +840,8 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
             else:
                 project = None
 
-        new_comparable = _find_comparable_component(repo, newrepo, project=project)
+        new_comparable = _find_comparable_component(
+            repo, newrepo, project=project)
 
         if new_comparable:
             new_comparable_id = new_comparable.id
@@ -723,7 +853,7 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
             new_comparable = newrepo.yumsack
 
         for pkg in pkgs:
-            if not pkg.arch in ARCHS:
+            if pkg.arch not in ARCHS:
                 continue
 
             # skip debuginfo and debugsource rpms
@@ -733,7 +863,10 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
 
             # look for removed packages
             if not list(new_comparable.searchNames(pkg.name)):
-                key_tuple = ( new_comparable_id, new_comparable_str, pkg.base_package_name)
+                key_tuple = (
+                    new_comparable_id, new_comparable_str,
+                    pkg.base_package_name
+                )
                 if key_tuple in modified:
                     modified[key_tuple]['br'].add(pkg.name)
                 else:
@@ -744,30 +877,32 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
         repo_str = str(repo)
 
         for pkg in pkgs:
-            nvr = "%s - %s-%s" % ( pkg.name, pkg.ver, pkg.rel)
-            removed[( repo.id, repo_str, pkg.base_package_name )].add(nvr)
+            nvr = "%s - %s-%s" % (pkg.name, pkg.ver, pkg.rel)
+            removed[(repo.id, repo_str, pkg.base_package_name)].add(nvr)
 
             for obsby, obss in obsoletes.items():
                 for obs in obss:
                     if pkg.inPrcoRange('provides', obs):
-                        obsoleted.update({ nvr : obsby })
+                        obsoleted.update({nvr: obsby})
 
     # merge added binaries to corresponding entries in modified
     # leftover packages are really new or have been completely removed
-    toremove = set()
     for key_tuple in modified:
         repoid, repostr, pkg = key_tuple
         if key_tuple in added:
             modified[key_tuple]["ba"] = added[key_tuple]['binaries']
             del(added[key_tuple])
 
-    diff = { "added" : dict(added),
-             "removed" : dict(removed),
-             "modified" : modified,
-             "obsoleted" : obsoleted}
+    diff = {
+        "added": dict(added),
+        "removed": dict(removed),
+        "modified": modified,
+        "obsoleted": obsoleted,
+    }
 
-    progress_cb( 100 ) 
-    return diff            
+    progress_cb(100)
+    return diff
+
 
 def _get_filter_meta(querydict):
     pkg_meta_types = PackageMetaType.objects.all().prefetch_related("choices")

@@ -25,7 +25,6 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
 <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
 &rsaquo; <a href="{% url opts|admin_urlname:'list' %}">{{ opts.verbose_name|capfirst }} List</a>
 </div>
 {% endblock %}
@@ -45,7 +44,7 @@
       {% for obj in group.list %}
                 <li>{{ obj }} <a href="{% url opts|admin_urlname:'view' obj.id %}">(view)</a>
                                {% if perms.note.can_add_note %}
-                               <a target="_" href="{% url 'admin:reports_note_add' %}?_popup=1&repo={{obj.id}}"> (edit note)</a>
+                               <a target="_" href="{% url 'admin:repo_note_add' %}?_popup=1&repo={{obj.id}}"> (edit note)</a>
                                {% endif %}
                                <a href="#" class="expandcomparable">(compare to)</a>
                   <div class="comparable">

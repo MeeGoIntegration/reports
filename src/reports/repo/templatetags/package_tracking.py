@@ -2,6 +2,7 @@ from django import template
 
 register = template.Library()
 
+
 @register.filter
 def is_any_defined(data, values_list):
     for choice in values_list:
@@ -9,12 +10,14 @@ def is_any_defined(data, values_list):
             return True
     return False
 
+
 @register.filter
 def get_from_dict(data, key):
     try:
         return data.get(key, '')
-    except KeyError, e:
+    except KeyError:
         return None
+
 
 @register.assignment_tag
 def is_checked(data, mtype, choice):
@@ -24,14 +27,19 @@ def is_checked(data, mtype, choice):
             return data[mtype.name][choice.name]
         else:
             return data[mtype.name] == choice.name
-    except Exception, e:
+    except Exception:
         return ""
+
 
 @register.filter(is_safe=True)
 def list_test_bins(container_packages, pkg):
     try:
         first = container_packages[pkg].keys()[0]
-        test_pkgs = ", ".join([bpkg for bpkg in container_packages[pkg][first]['binaries'] if bpkg.endswith("-tests")])
+        test_pkgs = ", ".join([
+            bpkg
+            for bpkg in container_packages[pkg][first]['binaries']
+            if bpkg.endswith("-tests")
+        ])
         return test_pkgs
-    except Exception, e:
+    except Exception:
         return ""

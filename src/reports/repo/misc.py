@@ -1,9 +1,10 @@
 import datetime
-import yum
 from collections import defaultdict
-from lxml import etree
 
+import rpmUtils.miscutils
+import yum
 from django.utils.datastructures import SortedDict
+
 
 def _get_pkg_meta(pkg, platforms, repo_pkg_meta):
     pkg_meta = {}
@@ -18,6 +19,7 @@ def _get_pkg_meta(pkg, platforms, repo_pkg_meta):
                 break
     return pkg_meta
 
+
 def _get_latest_repo_pkg_meta(repo):
         # try to find an associated graph that has pkg_meta
         for graph in repo.graph_set.all().order_by("-id"):
@@ -29,16 +31,8 @@ def _get_latest_repo_pkg_meta(repo):
                 return container.pkg_meta
         return {}
 
+
 def _find_repo_by_id(repo, repoid):
-    #found = False
-    #archs = [arch.name for arch in repo.archs.all()]
-    #for arch in archs:
-    #    rep_arch = repo.yumrepoid.replace("@ARCH@", arch)
-    #    if repoid == rep_arch:
-    #        found = True
-    #        break
-    #if found:
-    #    return repo
     if str(repo.pk) == str(repoid):
         return repo
 
@@ -49,7 +43,6 @@ def _find_repo_by_id(repo, repoid):
                 return found
         return False
 
-import rpmUtils.miscutils
 
 def _fmt_chlog(chlog):
 
@@ -63,33 +56,45 @@ def _fmt_chlog(chlog):
             x = x.rsplit("-", 1)[0]
         return x
 
-    chlog.sort(cmp=rpmUtils.miscutils.compareVerOnly, key=_get_chlog_ver, reverse=True)
+    chlog.sort(
+        cmp=rpmUtils.miscutils.compareVerOnly,
+        key=_get_chlog_ver,
+        reverse=True,
+    )
     flat = []
     for item in chlog:
         tm = datetime.date.fromtimestamp(int(item[0]))
-        flat.append("* %s %s" % (tm.strftime("%a %b %d %Y"), yum.misc.to_unicode(item[1])))
-        flat.extend([yum.misc.to_unicode(line) for line in item[2].splitlines()])
+        flat.append("* %s %s" % (
+            tm.strftime("%a %b %d %Y"), yum.misc.to_unicode(item[1]))
+        )
+        flat.extend([yum.misc.to_unicode(line)
+                     for line in item[2].splitlines()])
         flat.append("")
     return flat
 
-# recursive function that given a list of repos, will find their common container repos set
-# containers is passed by reference
+
+# recursive function that given a list of repos,
+# will find their common container repos set containers is passed by reference
 def _find_containers(repos, containers):
     for repo in repos:
         x = list(repo.containers.only("id"))
         if len(x):
             _find_containers(x, containers)
-        else:  
+        else:
             containers[repo.id] += 1
 
+
 def _release_date(release):
-    date = None   
+    date = None
     date_split = release.split(".")
     if len(date_split) > 1:
         date_string = date_split[1]
         if len(date_string) == 8:
-            date = datetime.datetime.date(datetime.datetime.strptime(date_string,"%Y%m%d"))
-    return date 
+            date = datetime.datetime.date(
+                datetime.datetime.strptime(date_string, "%Y%m%d")
+            )
+    return date
+
 
 def _find_comparable_component(component, repo, project=None):
     prjsack = repo.prjsack
@@ -106,10 +111,11 @@ def _find_comparable_component(component, repo, project=None):
 
     return False
 
+
 def _exclude_by_meta(pkg, meta):
     exclude = True
     if not hasattr(pkg, 'get'):
-	return exclude
+        return exclude
 
     for metatype, choices in pkg.get('meta', {}).items():
         if metatype in meta:
@@ -122,12 +128,13 @@ def _exclude_by_meta(pkg, meta):
                         exclude = False
     return exclude
 
+
 def _regroup_repo_packages(repo, pkgs=None, repos=None, meta=None):
     # regroup packages by leaf repo
     packages = defaultdict(SortedDict)
 
     for pkgname, repoids_pkg in repo.packages.iteritems():
-        if pkgs and not pkgname in pkgs:
+        if pkgs and pkgname not in pkgs:
             continue
         for repoid, pkg in repoids_pkg.iteritems():
             packages[repoid][pkgname] = pkg
@@ -135,7 +142,7 @@ def _regroup_repo_packages(repo, pkgs=None, repos=None, meta=None):
     for repoid in packages.keys():
         subrepo = _find_repo_by_id(repo, repoid)
         subrepo_str = str(subrepo)
-        if repos and not subrepo.id in repos:
+        if repos and subrepo.id not in repos:
             continue
 
         for pkgname in sorted(packages[repoid].keys()):
@@ -149,12 +156,15 @@ def _regroup_repo_packages(repo, pkgs=None, repos=None, meta=None):
 
     return dict(packages)
 
+
 def _find_unmet_reqs(pkg, newsack, oldsack=None):
     pkgreqs = pkg.requires
     unmet_reqs = set()
-    newprovs = {req : prov for req, prov in newsack.search_provides(pkgreqs)}
+    newprovs = {req: prov for req, prov in
+                newsack.search_provides(pkgreqs)}
     if oldsack is not None:
-        oldprovs = {req : prov for req, prov in oldsack.search_provides(pkgreqs)}
+        oldprovs = {req: prov for req, prov in
+                    oldsack.search_provides(pkgreqs)}
 
     for req in pkgreqs:
         if oldsack is None:
@@ -165,12 +175,13 @@ def _find_unmet_reqs(pkg, newsack, oldsack=None):
                 unmet_reqs.add(str(req))
     return unmet_reqs
 
+
 def _regroup(pos, container):
-    PLATS = set( repo.platform.name for repo in container.comps )
+    PLATS = set(repo.platform.name for repo in container.comps)
     PLATS.add(container.platform.name)
     repo_pkg_meta = container.pkg_meta
     pkgs = {}
-    capidx = {"requires":{},"provides":{},"obsoletes":{},"conflicts":{}}
+    capidx = {"requires": {}, "provides": {}, "obsoletes": {}, "conflicts": {}}
     for po in pos:
         repo = str(_find_repo_by_id(container, po.repoid))
         if repo not in pkgs:
@@ -178,54 +189,77 @@ def _regroup(pos, container):
 
         if po.basename not in pkgs[repo]:
             pkg_meta = _get_pkg_meta(po.basename, PLATS, repo_pkg_meta)
-            pkgs[repo][po.basename] = {"version" : po.ver,
-                                       "release" : po.rel,
-                                       "changelog" : _fmt_chlog(po.changelog),
-                                       "license" : po.license,
-                                       "binaries" : [],
-                                       "meta" : pkg_meta,
-                                       "messages" : [],
-                                      }
+            pkgs[repo][po.basename] = {
+                "version": po.ver,
+                "release": po.rel,
+                "changelog": _fmt_chlog(po.changelog),
+                "license": po.license,
+                "binaries": [],
+                "meta": pkg_meta,
+                "messages": [],
+            }
         pkgs[repo][po.basename]["binaries"].append(po)
         for kind, prco in po.prco.viewitems():
             capidx[kind].update(dict.fromkeys(prco, None))
 
     for kind, prco in capidx.viewitems():
-        search = None 
+        search = None
         if kind == "requires":
             search = container.yumsack.search_provides(prco)
         elif kind == "provides":
             search = container.yumsack.search_requires(prco)
         if search:
             for cap, what in search:
-                 if not capidx[kind][cap]:
-                     capidx[kind][cap] = set([what.name])
-                 else:
-                     capidx[kind][cap].add(what.name)
+                if not capidx[kind][cap]:
+                    capidx[kind][cap] = set([what.name])
+                else:
+                    capidx[kind][cap].add(what.name)
     return pkgs, capidx
+
 
 def _search(querytype, query, container, exact=True, casei=False):
     pos = []
     if querytype == "packagename":
         if exact and not casei:
-            pos=list([res[1] for res in container.yumsack.search_name([query])])
+            pos = [
+                res[1] for res in
+                container.yumsack.search_name([query])
+            ]
             if not pos:
-                pos=list([res[1] for res in container.yumsack.search_basename([query])])
+                pos = [
+                    res[1] for res in
+                    container.yumsack.search_basename([query])
+                ]
         else:
-            pos=list([res[1] for res in container.yumsack.search_name_contains([query], casei)])
+            pos = [
+                res[1] for res in
+                container.yumsack.search_name_contains([query], casei)
+            ]
             if not pos:
-                pos=list([res[1] for res in container.yumsack.search_basename_contains([query], casei)])
+                pos = [
+                    res[1] for res in
+                    container.yumsack.search_basename_contains([query], casei)
+                ]
     elif querytype == "provides":
-        pos=list([res[1] for res in container.yumsack.search_provides([(query, None, (None, None, None))])])
+        pos = [
+            res[1] for res in
+            container.yumsack.search_provides(
+                [(query, None, (None, None, None))]
+            )
+        ]
     elif querytype == "file":
-        pos=list([res[1] for res in container.yumsack.search_filenames([query])])
+        pos = [
+            res[1] for res in
+            container.yumsack.search_filenames([query])
+        ]
 
     return _regroup(pos, container)
+
 
 def _gen_abi(abi_obj):
 
     yumsack = abi_obj.version.target.yumsack
-    abi = { "public" : set(), "private" : set(), "files" : set() }
+    abi = {"public": set(), "private": set(), "files": set()}
     if abi_obj.public.strip():
         names = [name.strip() for name in abi_obj.public.splitlines()]
         pos = yumsack.search_name(names)
@@ -239,7 +273,13 @@ def _gen_abi(abi_obj):
     if abi_obj.files.strip():
         abi["files"] = [name.strip() for name in abi_obj.files.splitlines()]
 
-    return { "public" : list(abi["public"]) , "private" : list(abi["private"]), "files" : abi["files"], "version" : abi_obj.version.name }
+    return {
+        "public": list(abi["public"]),
+        "private": list(abi["private"]),
+        "files": abi["files"],
+        "version": abi_obj.version.name,
+    }
+
 
 def _leaf_components(repo):
     comps = set()
@@ -249,4 +289,3 @@ def _leaf_components(repo):
         else:
             comps.add(comp)
     return comps
-

@@ -2,24 +2,25 @@
 {% load i18n admin_static admin_modify %}
 {% load url from future %}
 {% load admin_urls %}
+{% load boolean_icon %}
 
-{% block extrahead %}{{ block.super }}                                                                                                                         
-{% url 'admin:jsi18n' as jsi18nurl %}                                                                                                                          
-<script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>                                                                      
-<script type="text/javascript" src="{% static "reports/js/jquery-1.7.2.min.js" %}"></script>                                                                   
-<script type="text/javascript" src="{% static "reports/js/table.js" %}"></script>                                                                              
+{% block extrahead %}{{ block.super }}
+{% url 'admin:jsi18n' as jsi18nurl %}
+<script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
+<script type="text/javascript" src="{% static "reports/js/jquery-1.7.2.min.js" %}"></script>
+<script type="text/javascript" src="{% static "reports/js/table.js" %}"></script>
 
-{{ media }}                                                                                                                                                    
+{{ media }}
 {{ media.js }}
 {% endblock %}
 
 {% block extrastyle %}
   {{ block.super }}
-  <link rel="stylesheet" type="text/css" href="{% static "admin/css/changelists.css" %}" />                                                                    
-  {{ media.css }}                                                                                                                                              
-  <style>                                                                                                                                                    
-    #changelist table thead th:first-child {width: inherit}                                                                                                  
-  </style>                                                                                                                                                   
+  <link rel="stylesheet" type="text/css" href="{% static "admin/css/changelists.css" %}" />
+  {{ media.css }}
+  <style>
+    #changelist table thead th:first-child {width: inherit}
+  </style>
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -55,11 +56,11 @@
               {% if releases.has_previous %}
               <a href="?page={{ releases.previous_page_number }}">previous</a>
               {% endif %}
-	      
+
               <span class="current">
 		Page {{ releases.number }} of {{ releases.paginator.num_pages }}.
               </span>
-	      
+
               {% if releases.has_next %}
               <a href="?page={{ releases.next_page_number }}">next</a>
               {% endif %}
@@ -75,22 +76,22 @@
         <td>{{ rel.target.release_date|date:"o-W" }}</td>
         <td>{{ rel.target.release_date }}</td>
         <td><a></a></td>
-        <td><a href="{% url 'admin:reports_repo_view' rel.target.id %}">{{ rel.target.platform.name }} {{ rel.target.release }}</a></td>
+        <td><a href="{% url 'admin:repo_repo_view' rel.target.id %}">{{ rel.target.platform.name }} {{ rel.target.release }}</a></td>
         <td>{% for img in rel.target.images.all %}
-            <a href="{% url 'admin:reports_image_view' img.id%}">{{ img }}</a> <a href="{{ img.url }}">(download)</a>
+            <a href="{% url 'admin:repo_image_view' img.id%}">{{ img }}</a> <a href="{{ img.url }}">(download)</a>
             {% if not forloop.last %}<br/>{% endif %}
             {% endfor %}
         </td>
-	<td>{{ rel.public|yesno:'<img alt="True" src="/site_media/admin/img/icon-yes.gif"/>,<img alt="False" src="/site_media/admin/img/icon-no.gif"/>'|safe }}</td>
-	<td>{{ rel.factory|yesno:'<img alt="True" src="/site_media/admin/img/icon-yes.gif"/>,<img alt="False" src="/site_media/admin/img/icon-no.gif"/>'|safe }}</td>
+        <td>{{ rel.public|boolean_icon }}</td>
+        <td>{{ rel.factory|boolean_icon }}</td>
         <td>{% for note in rel.target.note_set.all %}
             {{ note.body|safe }}
-            {% if perms.note.can_add_note %}                                                                                                
-              <a target="_" href="{% url 'admin:reports_note_change' note.id %}?_popup=1"> (edit note)</a>                               
+            {% if perms.note.can_add_note %}
+              <a target="_" href="{% url 'admin:repo_note_change' note.id %}?_popup=1"> (edit note)</a>
             {% endif %}
             {% if not forloop.last %}<br/>{% endif %}
             {% empty %}
-              <a target="_" href="{% url 'admin:reports_note_add' %}?_popup=1&repo={{ rel.target.id }}"> (add new note)</a>
+              <a target="_" href="{% url 'admin:repo_note_add' %}?_popup=1&repo={{ rel.target.id }}"> (add new note)</a>
             {% endfor %}
         </td>
       </tr>

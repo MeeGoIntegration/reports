@@ -30,13 +30,12 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
 <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
 </div>
 {% endblock %}
 {% endif %}
 
 {% block content %}
-<script>  
+<script>
   function gotoAnchor()
   {
     anchor = "{{ anchor|safe }}"
@@ -59,13 +58,13 @@
     {% if perms.reports.add_packagemetatype %}
       <input class="test-report" type="submit" value="Update">
     {% endif %}
-    <input type="hidden" name="repository" value="{{ repo }}"/>  
+    <input type="hidden" name="repository" value="{{ repo }}"/>
 
     <table id="t{{ forloop.counter }}" class="test_package table-autosort table-autofilter table-autopage:20 table-stripeclass:alternate
 					      table-page-number:t{{ forloop.counter }}page table-page-count:t{{ forloop.counter }}pages
 					      table-filtered-rowcount:t{{ forloop.counter }}filtercount table-rowcount:t{{ forloop.counter }}allcount">
-      <thead> 
-	<tr> 
+      <thead>
+	<tr>
 	  <th class="filterable">Package <input name="filter" size="8" onkeyup="Table.filter(this,this)"/></th>
 	  <th class="table-filterable">In image</th>
 	  <th class="table-sortable:default">Test Packages</th>
@@ -87,7 +86,7 @@
 	    {% endif %}
 	  {% endfor %}
 	</tr>
-      </thead> 
+      </thead>
       <tbody>
 
 	{% for pkg, data in repos.items %}
@@ -141,7 +140,7 @@
 	  {% endfor %}
 	</tr>
       {% endfor %}
-      </tbody> 
+      </tbody>
       <tfoot>
 	<tr>
 	  <td class="table-page:previous" style="cursor:pointer;">&lt; &lt; Previous</td>
@@ -162,7 +161,7 @@
 {% else %}
 <p>
   Graph not yet created
- <a href="{% url 'admin:reports_graph_add' %}?repo={{container.id}}">Create graph for whole repo</a>
+ <a href="{% url 'admin:repo_graph_add' %}?repo={{container.id}}">Create graph for whole repo</a>
 </p>
 {% endif %}
 
