@@ -1,4 +1,3 @@
-{% load url from future %}
 {% load admin_urls %}
 <div id="filters">
   <form action="{% url 'admin:repo_repo_search' %}" method="post">{% csrf_token %}
