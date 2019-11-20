@@ -77,6 +77,10 @@ USE_L10N = False
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = True
 
+ALLOWED_HOSTS = [
+    h.strip() for h in config.get('web', 'allowed_hosts').split(',')
+]
+
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
