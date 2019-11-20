@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib.admin.sites import AdminSite
-from django.shortcuts import redirect
 from rest_framework import routers
 
 from reports.repo import views as repo_views
@@ -23,16 +22,8 @@ class ReportsAdmin(AdminSite):
         # the model admin urls from there
         registry = self._registry
         self._registry = {}
-        default_patterns = super(ReportsAdmin, self).get_urls()
+        urlpatterns = super(ReportsAdmin, self).get_urls()
         self._registry = registry
-
-        app_list_pattern = None
-        urlpatterns = []
-        for p in default_patterns:
-            if p.name != 'app_list':
-                urlpatterns.append(p)
-            else:
-                app_list_pattern = p
 
         urlpatterns.extend([
             url(r'^api/', include(router.urls)),
@@ -40,20 +31,23 @@ class ReportsAdmin(AdminSite):
         ])
 
         # Add in each model's views, but without the app label
+        valid_app_labels = set()
         for model, model_admin in self._registry.iteritems():
             urlpatterns.append(
-                url(r'^%s/' % model._meta.module_name,
+                url(r'^%s/' % model._meta.model_name,
                     include(model_admin.urls))
             )
+            valid_app_labels.add(model._meta.app_label)
 
-        # The app_list view with pattern /<app_label> is added last.
-        # Some admin templates require it, but we just redirect to the index
-        # view
-        urlpatterns.append(app_list_pattern)
+        # Point the app_list url to index as several default templates need it
+        if valid_app_labels:
+            urlpatterns.append(
+                url(r'^(?P<app_label>' + '|'.join(valid_app_labels) + ')/$',
+                    self.admin_view(self.index), name='app_list'
+                    )
+            )
+
         return urlpatterns
-
-    def app_index(self, request, app_label, extra_context=None):
-        return redirect('admin:index')
 
     def index(self, request, extra_context=None):
         if extra_context is None:
