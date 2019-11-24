@@ -1,7 +1,7 @@
 # Django settings for reports project.
 import ConfigParser
 import json
-from os.path import dirname, expanduser, isabs, isdir, isfile, join
+from os.path import dirname, expanduser, isabs, isdir, isfile, join, split
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -110,7 +110,9 @@ STATICFILES_FINDERS = (
     # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
-ALLOWED_INCLUDE_ROOTS = []
+
+_template_dirs = [join(PROJECT_DIR, 'templates')]
+
 SHORTCUTS_TEMPLATE = config.get('web', 'shortcuts_template')
 if SHORTCUTS_TEMPLATE:
     if not (isabs(SHORTCUTS_TEMPLATE) and isfile(SHORTCUTS_TEMPLATE)):
@@ -118,9 +120,8 @@ if SHORTCUTS_TEMPLATE:
             "SHORTCUTS_TEMPLATE '%s' is not absolute path to existing file" %
             SHORTCUTS_TEMPLATE
         )
-    ALLOWED_INCLUDE_ROOTS = [
-        dirname(SHORTCUTS_TEMPLATE)
-    ]
+    _shortcuts_template_dir, SHORTCUTS_TEMPLATE = split(SHORTCUTS_TEMPLATE)
+    _template_dirs.append(_shortcuts_template_dir)
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
@@ -137,7 +138,7 @@ WSGI_APPLICATION = 'reports.wsgi.application'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [join(PROJECT_DIR, 'templates')],
+        'DIRS': _template_dirs,
         'APP_DIRS': False,
         'OPTIONS': {
             'context_processors': [
