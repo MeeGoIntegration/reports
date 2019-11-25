@@ -742,39 +742,39 @@ class Patterns(object):
         self._count = len(self._items.keys())
 
     def _xml_to_pat(self, patxml):
-            ns = patxml.nsmap[None]
-            nsrpm = patxml.nsmap["rpm"]
-            name = patxml.find("{%s}%s" % (ns, "name")).text
-            vertag = patxml.find("{%s}%s" % (ns, "version"))
-            version = (None, None)
-            if vertag is not None:
-                version = (
-                    vertag.attrib.get("ver", None),
-                    vertag.attrib.get("rel", None)
-                )
-            summary = patxml.find("{%s}%s" % (ns, "summary")).text
-            description = patxml.find("{%s}%s" % (ns, "description")).text
-            reqtag = patxml.find("{%s}%s" % (nsrpm, "requires"))
-            requires = []
-            if reqtag is not None:
-                requires = [
-                    entry.attrib["name"]
-                    for entry in reqtag.findall("{%s}%s" % (nsrpm, "entry"))
-                ]
-            provtag = patxml.find("{%s}%s" % (nsrpm, "provides"))
-            provides = []
-            if provtag is not None:
-                provides = [
-                    entry.attrib["name"]
-                    for entry in provtag.findall("{%s}%s" % (nsrpm, "entry"))
-                ]
-            self._items[name] = {
-                "version": version,
-                "summary": summary,
-                "description": description,
-                "requires": requires,
-                "provides": provides
-            }
+        ns = patxml.nsmap[None]
+        nsrpm = patxml.nsmap["rpm"]
+        name = patxml.find("{%s}%s" % (ns, "name")).text
+        vertag = patxml.find("{%s}%s" % (ns, "version"))
+        version = (None, None)
+        if vertag is not None:
+            version = (
+                vertag.attrib.get("ver", None),
+                vertag.attrib.get("rel", None)
+            )
+        summary = patxml.find("{%s}%s" % (ns, "summary")).text
+        description = patxml.find("{%s}%s" % (ns, "description")).text
+        reqtag = patxml.find("{%s}%s" % (nsrpm, "requires"))
+        requires = []
+        if reqtag is not None:
+            requires = [
+                entry.attrib["name"]
+                for entry in reqtag.findall("{%s}%s" % (nsrpm, "entry"))
+            ]
+        provtag = patxml.find("{%s}%s" % (nsrpm, "provides"))
+        provides = []
+        if provtag is not None:
+            provides = [
+                entry.attrib["name"]
+                for entry in provtag.findall("{%s}%s" % (nsrpm, "entry"))
+            ]
+        self._items[name] = {
+            "version": version,
+            "summary": summary,
+            "description": description,
+            "requires": requires,
+            "provides": provides
+        }
 
     @property
     def count(self):

@@ -145,11 +145,12 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
             ],
             'debug': DEBUG,
-            'loaders': [ ('django.template.loaders.cached.Loader', [
-                          'django.template.loaders.filesystem.Loader',
-                          'django.template.loaders.app_directories.Loader',]
-            )],
-                
+            'loaders': [
+                ('django.template.loaders.cached.Loader', [
+                    'django.template.loaders.filesystem.Loader',
+                    'django.template.loaders.app_directories.Loader',
+                ])
+            ],
         }
     },
 ]

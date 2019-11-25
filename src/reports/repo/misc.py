@@ -20,15 +20,15 @@ def _get_pkg_meta(pkg, platforms, repo_pkg_meta):
 
 
 def _get_latest_repo_pkg_meta(repo):
-        # try to find an associated graph that has pkg_meta
-        for graph in repo.graph_set.all().order_by("-id"):
-            if graph.has_pkg_meta:
-                return graph.pkg_meta
-        # try to find a container that has a pkg_meta with our platform
-        for container in repo.containers.all():
-            if repo.platform.name in container.pkg_meta:
-                return container.pkg_meta
-        return {}
+    # try to find an associated graph that has pkg_meta
+    for graph in repo.graph_set.all().order_by("-id"):
+        if graph.has_pkg_meta:
+            return graph.pkg_meta
+    # try to find a container that has a pkg_meta with our platform
+    for container in repo.containers.all():
+        if repo.platform.name in container.pkg_meta:
+            return container.pkg_meta
+    return {}
 
 
 def _find_repo_by_id(repo, repoid):
