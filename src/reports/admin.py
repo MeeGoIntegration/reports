@@ -58,4 +58,4 @@ class ReportsAdmin(AdminSite):
         )
 
 
-site = ReportsAdmin(name='admin')
+site = ReportsAdmin(name='reports')

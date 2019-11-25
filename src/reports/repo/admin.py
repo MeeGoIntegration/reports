@@ -206,14 +206,14 @@ class GraphAdmin(admin.ModelAdmin):
         ):
             return '<a href="%s">Download</a> or <a href="%s">View</a>' % (
                 os.path.join("/", settings.MEDIA_URL, graph.svg.name),
-                reverse('admin:repo_graph_view', args=(graph.id,)),
+                reverse('reports:repo_graph_view', args=(graph.id,)),
             )
         elif (
             graph.dot and
             os.path.exists(os.path.join(settings.MEDIA_ROOT, graph.dot.name))
         ):
             return 'Not yet rendered.<a href="%s">Render and view</a>' % (
-                reverse('admin:repo_graph_view', args=(graph.id,)),
+                reverse('reports:repo_graph_view', args=(graph.id,)),
             )
 
     svg_url.short_description = "SVG file"
@@ -453,7 +453,7 @@ class ABIAdmin(admin.ModelAdmin):
 
     def abi_list(self, abi):
         return '<a href="%s?format=json">Get JSON</a>' % (
-            reverse('admin:repo_abi_export', args=(abi.id,)),
+            reverse('reports:repo_abi_export', args=(abi.id,)),
         )
 
     abi_list.short_description = "ABI listing"

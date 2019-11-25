@@ -109,7 +109,7 @@ class Repo(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('admin:view', [str(self.id)])
+        return ('reports:repo_repo_view', [str(self.id)])
 
     @property
     def yumrepourl(self):
@@ -363,7 +363,7 @@ class Image(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('admin:view', [str(self.id)])
+        return ('reports:repo_image_view', [str(self.id)])
 
     def __str__(self):
         return "%s %s" % (self.name, self.release)
