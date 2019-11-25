@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.exceptions import ValidationError
 import json
 from django.utils.translation import ugettext_lazy as _
 
@@ -25,9 +26,6 @@ class JSONFormField(Field):
 
 class JSONFieldBase(models.Field):
 
-    # Used so to_python() is called
-    #__metaclass__ = models.SubfieldBase
-
     def __init__(self, *args, **kwargs):
         self.dump_kwargs = kwargs.pop('dump_kwargs', {
             'cls': DjangoJSONEncoder,
@@ -42,9 +40,12 @@ class JSONFieldBase(models.Field):
         if isinstance(value, basestring):
             try:
                 return json.loads(value, **self.load_kwargs)
-            except ValueError:
-                pass
+            except ValueError as e:
+                raise ValidationError('Invalid JSON %s' % e)
         return value
+
+    def from_db_value(self, value, expression, connection, context):
+        return self.to_python(value)
 
     def get_db_prep_value(self, value, connection, prepared=False):
         """Convert JSON object to a string"""
