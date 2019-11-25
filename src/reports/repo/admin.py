@@ -289,7 +289,6 @@ class GraphAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'graph.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def view_testreport(self, request, graphid, repoid=None):
@@ -414,13 +413,11 @@ class GraphAdmin(admin.ModelAdmin):
             return TemplateResponse(
                 request, 'certification.html',
                 context=context,
-                current_app=self.admin_site.name,
             )
         else:
             return TemplateResponse(
                 request, 'testreport.html',
                 context=context,
-                current_app=self.admin_site.name,
             )
 
 
@@ -533,7 +530,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'list.html',
             context=context,
-            current_app=self.admin_site.name
         )
 
     def view_shortcut(self, request, plat, symb):
@@ -576,7 +572,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'search.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def view(self, request, repoid):
@@ -621,7 +616,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'view.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def diff_shortcut(self, request, plat, nsymb, osymb):
@@ -655,7 +649,6 @@ class RepoAdmin(admin.ModelAdmin):
             return TemplateResponse(
                 request, 'diff.html',
                 context=context,
-                current_app=self.admin_site.name,
             )
 
         def progress_cb(msg):
@@ -709,7 +702,6 @@ class RepoAdmin(admin.ModelAdmin):
             return TemplateResponse(
                 request, 'diff_noprogress.html',
                 context=context,
-                current_app=self.admin_site.name,
             )
 
         progress_cb("Generating repository diff")
@@ -764,7 +756,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, "diff_content.html",
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def prjgraph_shortcut(self, request, plat, symb):
@@ -786,7 +777,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'graph.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
 
@@ -828,7 +818,6 @@ class ImageAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'list.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def view(self, request, imageid):
@@ -868,7 +857,6 @@ class ImageAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'view.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def diff(self, request, new_imgid, old_imgid):
@@ -952,7 +940,6 @@ class ImageAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'diff.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
 
