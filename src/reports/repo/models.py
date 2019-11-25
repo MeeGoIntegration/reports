@@ -329,14 +329,13 @@ class Repo(models.Model):
     server = models.ForeignKey(RepoServer)
     repo_path = models.CharField(max_length=250)
     platform = models.ForeignKey(Platform)
-    projects = models.ManyToManyField(Project, blank=True, null=True)
+    projects = models.ManyToManyField(Project, blank=True)
     components = models.ManyToManyField(
-        "self", symmetrical=False, blank=True, null=True,
-        related_name="containers"
+        "self", symmetrical=False, blank=True, related_name="containers"
     )
     release = models.CharField(max_length=250)
     release_date = models.DateField(blank=True, null=True)
-    archs = models.ManyToManyField(Arch, blank=True, null=True)
+    archs = models.ManyToManyField(Arch, blank=True)
 
 
 class Note(models.Model):
@@ -356,7 +355,7 @@ class IssueTracker(models.Model):
     name = models.CharField(max_length=100, unique=True)
     re = models.CharField(max_length=100)
     url = models.CharField(max_length=200)
-    platform = models.ManyToManyField(Platform, blank=True, null=True)
+    platform = models.ManyToManyField(Platform, blank=True)
 
 
 class Image(models.Model):
@@ -372,7 +371,7 @@ class Image(models.Model):
     url = models.CharField(max_length=250)
     url_file = models.CharField(max_length=250)
     urls = models.TextField(blank=True, null=True)
-    repo = models.ManyToManyField(Repo, blank=True, null=True)
+    repo = models.ManyToManyField(Repo, blank=True)
     container_repo = models.ForeignKey(
         Repo, blank=True, null=True, related_name="images")
 
@@ -615,7 +614,7 @@ class Graph(models.Model):
     depth = models.PositiveIntegerField(blank=True, null=True, default=3)
     image = models.ForeignKey(Image, blank=True, null=True)
     packages = models.TextField(blank=True, null=True)
-    repo = models.ManyToManyField(Repo, blank=True, null=True)
+    repo = models.ManyToManyField(Repo, blank=True)
     dot = models.FileField(upload_to="graph")
     svg = models.FileField(upload_to="graph", null=True)
     pkg_meta = JSONField(blank=True, null=True)
