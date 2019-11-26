@@ -344,7 +344,7 @@ class Note(models.Model):
         return "Note for %s %s" % (self.repo.platform.name, self.repo.release)
 
     body = models.TextField()
-    repo = models.ForeignKey(Repo, unique=True)
+    repo = models.OneToOneField(Repo)
 
 
 class IssueTracker(models.Model):
@@ -576,7 +576,7 @@ class Pointer(models.Model):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
     factory = models.BooleanField(default=False)
-    target = models.ForeignKey(Repo, unique=True)
+    target = models.OneToOneField(Repo)
 
 
 class ABI(models.Model):
