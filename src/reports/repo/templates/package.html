@@ -1,11 +1,10 @@
 {% load i18n admin_static admin_modify %}
-{% load url from future %}
 {% load admin_urls %}
 {% load render_pkg_meta %}
 
 <h3>
   <a class="pkgname" href="#">{{ pkgname }} - {{ pkg.version }} - {{ pkg.release }}</a> -- {{ pkg.license }}
-     -- <a href="{% url 'admin:repo_repo_view' container.id %}?packages={{pkgname}}&details=1">(details)</a>
+     -- <a href="{% url 'reports:repo_repo_view' container.id %}?packages={{pkgname}}&details=1">(details)</a>
 </h3>
   <div class="changelog">
     <ul>

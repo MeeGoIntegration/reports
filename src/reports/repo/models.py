@@ -12,7 +12,6 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
 from rpmUtils.miscutils import splitFilename
-from south.modelsinspector import add_introspection_rules
 
 import buildservice
 import rpmmd
@@ -27,8 +26,6 @@ try:
 except ImportError:
     # during development it is in the cwd
     from jsonfield import JSONField
-
-add_introspection_rules([], ["^reports\.jsonfield\.fields\.JSONField"])
 
 
 class Arch(models.Model):
@@ -112,7 +109,7 @@ class Repo(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('admin:view', [str(self.id)])
+        return ('reports:repo_repo_view', [str(self.id)])
 
     @property
     def yumrepourl(self):
@@ -332,14 +329,13 @@ class Repo(models.Model):
     server = models.ForeignKey(RepoServer)
     repo_path = models.CharField(max_length=250)
     platform = models.ForeignKey(Platform)
-    projects = models.ManyToManyField(Project, blank=True, null=True)
+    projects = models.ManyToManyField(Project, blank=True)
     components = models.ManyToManyField(
-        "self", symmetrical=False, blank=True, null=True,
-        related_name="containers"
+        "self", symmetrical=False, blank=True, related_name="containers"
     )
     release = models.CharField(max_length=250)
     release_date = models.DateField(blank=True, null=True)
-    archs = models.ManyToManyField(Arch, blank=True, null=True)
+    archs = models.ManyToManyField(Arch, blank=True)
 
 
 class Note(models.Model):
@@ -348,7 +344,7 @@ class Note(models.Model):
         return "Note for %s %s" % (self.repo.platform.name, self.repo.release)
 
     body = models.TextField()
-    repo = models.ForeignKey(Repo, unique=True)
+    repo = models.OneToOneField(Repo)
 
 
 class IssueTracker(models.Model):
@@ -359,14 +355,14 @@ class IssueTracker(models.Model):
     name = models.CharField(max_length=100, unique=True)
     re = models.CharField(max_length=100)
     url = models.CharField(max_length=200)
-    platform = models.ManyToManyField(Platform, blank=True, null=True)
+    platform = models.ManyToManyField(Platform, blank=True)
 
 
 class Image(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('admin:view', [str(self.id)])
+        return ('reports:repo_image_view', [str(self.id)])
 
     def __str__(self):
         return "%s %s" % (self.name, self.release)
@@ -375,7 +371,7 @@ class Image(models.Model):
     url = models.CharField(max_length=250)
     url_file = models.CharField(max_length=250)
     urls = models.TextField(blank=True, null=True)
-    repo = models.ManyToManyField(Repo, blank=True, null=True)
+    repo = models.ManyToManyField(Repo, blank=True)
     container_repo = models.ForeignKey(
         Repo, blank=True, null=True, related_name="images")
 
@@ -580,7 +576,7 @@ class Pointer(models.Model):
     name = models.CharField(max_length=200)
     public = models.BooleanField(default=False)
     factory = models.BooleanField(default=False)
-    target = models.ForeignKey(Repo, unique=True)
+    target = models.OneToOneField(Repo)
 
 
 class ABI(models.Model):
@@ -618,7 +614,7 @@ class Graph(models.Model):
     depth = models.PositiveIntegerField(blank=True, null=True, default=3)
     image = models.ForeignKey(Image, blank=True, null=True)
     packages = models.TextField(blank=True, null=True)
-    repo = models.ManyToManyField(Repo, blank=True, null=True)
+    repo = models.ManyToManyField(Repo, blank=True)
     dot = models.FileField(upload_to="graph")
     svg = models.FileField(upload_to="graph", null=True)
     pkg_meta = JSONField(blank=True, null=True)

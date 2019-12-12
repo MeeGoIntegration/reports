@@ -1,7 +1,7 @@
 # Django settings for reports project.
 import ConfigParser
 import json
-from os.path import dirname, expanduser, isabs, isdir, isfile, join
+from os.path import dirname, expanduser, isabs, isdir, isfile, join, split
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -18,7 +18,6 @@ config.read([
 
 # Change this to False when developing locally
 DEBUG = config.getboolean('base', 'debug')
-TEMPLATE_DEBUG = DEBUG
 
 admin_emails = config.get('base', 'admin_emails')
 if admin_emails:
@@ -78,6 +77,10 @@ USE_L10N = False
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = True
 
+ALLOWED_HOSTS = [
+    h.strip() for h in config.get('web', 'allowed_hosts').split(',')
+]
+
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
@@ -107,16 +110,9 @@ STATICFILES_FINDERS = (
     # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    ('django.template.loaders.cached.Loader', [
-        'django.template.loaders.filesystem.Loader',
-        'django.template.loaders.app_directories.Loader',
-    ]
-    ),
-)
 
-ALLOWED_INCLUDE_ROOTS = []
+_template_dirs = [join(PROJECT_DIR, 'templates')]
+
 SHORTCUTS_TEMPLATE = config.get('web', 'shortcuts_template')
 if SHORTCUTS_TEMPLATE:
     if not (isabs(SHORTCUTS_TEMPLATE) and isfile(SHORTCUTS_TEMPLATE)):
@@ -124,9 +120,8 @@ if SHORTCUTS_TEMPLATE:
             "SHORTCUTS_TEMPLATE '%s' is not absolute path to existing file" %
             SHORTCUTS_TEMPLATE
         )
-    ALLOWED_INCLUDE_ROOTS = [
-        dirname(SHORTCUTS_TEMPLATE)
-    ]
+    _shortcuts_template_dir, SHORTCUTS_TEMPLATE = split(SHORTCUTS_TEMPLATE)
+    _template_dirs.append(_shortcuts_template_dir)
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
@@ -140,13 +135,25 @@ ROOT_URLCONF = 'reports.urls'
 # Python dotted path to the WSGI application used by Django's runserver.
 WSGI_APPLICATION = 'reports.wsgi.application'
 
-TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or
-    # "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-    join(PROJECT_DIR, 'templates'),
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': _template_dirs,
+        'APP_DIRS': False,
+        'OPTIONS': {
+            'context_processors': [
+                "django.contrib.auth.context_processors.auth",
+            ],
+            'debug': DEBUG,
+            'loaders': [
+                ('django.template.loaders.cached.Loader', [
+                    'django.template.loaders.filesystem.Loader',
+                    'django.template.loaders.app_directories.Loader',
+                ])
+            ],
+        }
+    },
+]
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -195,7 +202,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'rest_framework',
     'reports.repo',
-    'south',
 )
 
 _cache_options = json.loads(config.get('cache', 'options'))

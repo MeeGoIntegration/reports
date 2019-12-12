@@ -6,7 +6,7 @@ from collections import defaultdict
 from copy import copy
 
 from django import forms
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.conf import settings
 from django.contrib import admin, messages
 from django.core.cache import cache
@@ -158,8 +158,7 @@ class GraphAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(GraphAdmin, self).get_urls()
-        my_urls = patterns(
-            '',
+        my_urls = [
             url(r'^view/(\d+)/$',
                 self.admin_site.admin_view(self.view),
                 name="repo_graph_view"),
@@ -175,7 +174,7 @@ class GraphAdmin(admin.ModelAdmin):
             url(r'^certification/(.+)/(previous|latest|live.*)/$',
                 self.admin_site.admin_view(self.view_shortcut),
                 name="repo_view_shortcut"),
-        )
+        ]
         return my_urls + urls
 
     def view_shortcut(self, request, plat, symb):
@@ -207,14 +206,14 @@ class GraphAdmin(admin.ModelAdmin):
         ):
             return '<a href="%s">Download</a> or <a href="%s">View</a>' % (
                 os.path.join("/", settings.MEDIA_URL, graph.svg.name),
-                reverse('admin:repo_graph_view', args=(graph.id,)),
+                reverse('reports:repo_graph_view', args=(graph.id,)),
             )
         elif (
             graph.dot and
             os.path.exists(os.path.join(settings.MEDIA_ROOT, graph.dot.name))
         ):
             return 'Not yet rendered.<a href="%s">Render and view</a>' % (
-                reverse('admin:repo_graph_view', args=(graph.id,)),
+                reverse('reports:repo_graph_view', args=(graph.id,)),
             )
 
     svg_url.short_description = "SVG file"
@@ -290,7 +289,6 @@ class GraphAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'graph.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def view_testreport(self, request, graphid, repoid=None):
@@ -415,13 +413,11 @@ class GraphAdmin(admin.ModelAdmin):
             return TemplateResponse(
                 request, 'certification.html',
                 context=context,
-                current_app=self.admin_site.name,
             )
         else:
             return TemplateResponse(
                 request, 'testreport.html',
                 context=context,
-                current_app=self.admin_site.name,
             )
 
 
@@ -439,12 +435,11 @@ class ABIAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(ABIAdmin, self).get_urls()
-        my_urls = patterns(
-            '',
+        my_urls = [
             url(r'^export/(.+)/$',
                 self.admin_site.admin_view(self.abi_export),
                 name="repo_abi_export"),
-        )
+        ]
         return my_urls + urls
 
     def abi_export(self, request, pk):
@@ -458,7 +453,7 @@ class ABIAdmin(admin.ModelAdmin):
 
     def abi_list(self, abi):
         return '<a href="%s?format=json">Get JSON</a>' % (
-            reverse('admin:repo_abi_export', args=(abi.id,)),
+            reverse('reports:repo_abi_export', args=(abi.id,)),
         )
 
     abi_list.short_description = "ABI listing"
@@ -480,8 +475,7 @@ class RepoAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(RepoAdmin, self).get_urls()
-        my_urls = patterns(
-            '',
+        my_urls = [
             url(r'^diff/(.+)/(.+)/(.+)/$',
                 self.admin_site.admin_view(self.diff_shortcut),
                 name="repo_diff_shortcut"),
@@ -509,7 +503,7 @@ class RepoAdmin(admin.ModelAdmin):
             url(r'^list/$',
                 self.admin_site.admin_view(self.listall),
                 name="repo_repo_list"),
-        )
+        ]
         return my_urls + urls
 
     def listall(self, request):
@@ -536,7 +530,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'list.html',
             context=context,
-            current_app=self.admin_site.name
         )
 
     def view_shortcut(self, request, plat, symb):
@@ -579,7 +572,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'search.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def view(self, request, repoid):
@@ -624,7 +616,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'view.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def diff_shortcut(self, request, plat, nsymb, osymb):
@@ -658,7 +649,6 @@ class RepoAdmin(admin.ModelAdmin):
             return TemplateResponse(
                 request, 'diff.html',
                 context=context,
-                current_app=self.admin_site.name,
             )
 
         def progress_cb(msg):
@@ -712,7 +702,6 @@ class RepoAdmin(admin.ModelAdmin):
             return TemplateResponse(
                 request, 'diff_noprogress.html',
                 context=context,
-                current_app=self.admin_site.name,
             )
 
         progress_cb("Generating repository diff")
@@ -767,7 +756,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, "diff_content.html",
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def prjgraph_shortcut(self, request, plat, symb):
@@ -789,7 +777,6 @@ class RepoAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'graph.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
 
@@ -798,8 +785,7 @@ class ImageAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(ImageAdmin, self).get_urls()
-        my_urls = patterns(
-            '',
+        my_urls = [
             url(r'^diff/(\d+)/(\d+)/$',
                 self.admin_site.admin_view(self.diff),
                 name="repo_image_diff"),
@@ -809,7 +795,7 @@ class ImageAdmin(admin.ModelAdmin):
             url(r'^list/$',
                 self.admin_site.admin_view(self.listall),
                 name="repo_image_list"),
-        )
+        ]
         return my_urls + urls
 
     def listall(self, request):
@@ -832,7 +818,6 @@ class ImageAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'list.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def view(self, request, imageid):
@@ -872,7 +857,6 @@ class ImageAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'view.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
     def diff(self, request, new_imgid, old_imgid):
@@ -956,7 +940,6 @@ class ImageAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'diff.html',
             context=context,
-            current_app=self.admin_site.name,
         )
 
 

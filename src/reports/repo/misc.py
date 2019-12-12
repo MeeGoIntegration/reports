@@ -1,9 +1,8 @@
 import datetime
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 import rpmUtils.miscutils
 import yum
-from django.utils.datastructures import SortedDict
 
 
 def _get_pkg_meta(pkg, platforms, repo_pkg_meta):
@@ -21,15 +20,15 @@ def _get_pkg_meta(pkg, platforms, repo_pkg_meta):
 
 
 def _get_latest_repo_pkg_meta(repo):
-        # try to find an associated graph that has pkg_meta
-        for graph in repo.graph_set.all().order_by("-id"):
-            if graph.has_pkg_meta:
-                return graph.pkg_meta
-        # try to find a container that has a pkg_meta with our platform
-        for container in repo.containers.all():
-            if repo.platform.name in container.pkg_meta:
-                return container.pkg_meta
-        return {}
+    # try to find an associated graph that has pkg_meta
+    for graph in repo.graph_set.all().order_by("-id"):
+        if graph.has_pkg_meta:
+            return graph.pkg_meta
+    # try to find a container that has a pkg_meta with our platform
+    for container in repo.containers.all():
+        if repo.platform.name in container.pkg_meta:
+            return container.pkg_meta
+    return {}
 
 
 def _find_repo_by_id(repo, repoid):
@@ -131,7 +130,7 @@ def _exclude_by_meta(pkg, meta):
 
 def _regroup_repo_packages(repo, pkgs=None, repos=None, meta=None):
     # regroup packages by leaf repo
-    packages = defaultdict(SortedDict)
+    packages = defaultdict(OrderedDict)
 
     for pkgname, repoids_pkg in repo.packages.iteritems():
         if pkgs and pkgname not in pkgs:

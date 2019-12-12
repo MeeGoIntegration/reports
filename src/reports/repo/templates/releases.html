@@ -1,6 +1,5 @@
 {% extends "admin/base_site.html" %}
 {% load i18n admin_static admin_modify %}
-{% load url from future %}
 {% load admin_urls %}
 {% load boolean_icon %}
 
@@ -21,12 +20,6 @@
   <style>
     #changelist table thead th:first-child {width: inherit}
   </style>
-{% endblock %}
-
-{% block breadcrumbs %}
-<div class="breadcrumbs">
-<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-</div>
 {% endblock %}
 
 {% block content %}
@@ -76,9 +69,9 @@
         <td>{{ rel.target.release_date|date:"o-W" }}</td>
         <td>{{ rel.target.release_date }}</td>
         <td><a></a></td>
-        <td><a href="{% url 'admin:repo_repo_view' rel.target.id %}">{{ rel.target.platform.name }} {{ rel.target.release }}</a></td>
+        <td><a href="{% url 'reports:repo_repo_view' rel.target.id %}">{{ rel.target.platform.name }} {{ rel.target.release }}</a></td>
         <td>{% for img in rel.target.images.all %}
-            <a href="{% url 'admin:repo_image_view' img.id%}">{{ img }}</a> <a href="{{ img.url }}">(download)</a>
+            <a href="{% url 'reports:repo_image_view' img.id%}">{{ img }}</a> <a href="{{ img.url }}">(download)</a>
             {% if not forloop.last %}<br/>{% endif %}
             {% endfor %}
         </td>
@@ -87,11 +80,11 @@
         <td>{% for note in rel.target.note_set.all %}
             {{ note.body|safe }}
             {% if perms.note.can_add_note %}
-              <a target="_" href="{% url 'admin:repo_note_change' note.id %}?_popup=1"> (edit note)</a>
+              <a target="_" href="{% url 'reports:repo_note_change' note.id %}?_popup=1"> (edit note)</a>
             {% endif %}
             {% if not forloop.last %}<br/>{% endif %}
             {% empty %}
-              <a target="_" href="{% url 'admin:repo_note_add' %}?_popup=1&repo={{ rel.target.id }}"> (add new note)</a>
+              <a target="_" href="{% url 'reports:repo_note_add' %}?_popup=1&repo={{ rel.target.id }}"> (add new note)</a>
             {% endfor %}
         </td>
       </tr>
