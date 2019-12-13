@@ -1,4 +1,10 @@
 $(document).ready(function() {
+    $("a.toggle_all").click(function(){
+        $("div.packages").toggle();
+        $("div.patterns").toggle();
+        $("div.changelog").toggle();
+        return false;
+    });
     $("a.toggle").click(function(){
         $("div.changelog").toggle();
         return false;

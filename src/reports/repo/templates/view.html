@@ -50,10 +50,10 @@
 {% endif %}
 <tr><td class="main-column">
   {% if container.yumrepourl %}
-  <h2>Viewing details of <a href="{{ container.yumrepourl }}">{{ container }}</a> <a class="toggle" href="#">(toggle all)</a></h2>
+  <h2>Viewing details of <a href="{{ container.yumrepourl }}">{{ container }}</a> <a class="toggle_all" href="#">(toggle all)</a></h2>
   {% endif %}
   {% if container.url %}
-  <h2>Viewing details of <a href="{{ container.url }}">{{ container }}</a> <a class="toggle" href="#">(toggle all)</a></h2>
+  <h2>Viewing details of <a href="{{ container.url }}">{{ container }}</a> <a class="toggle_all" href="#">(toggle all)</a></h2>
   {% endif %}
   {% if container.container_repo %}
   <h3> part of  <a href="{% url 'reports:repo_repo_view' container.container_repo.id %}">{{container.container_repo}}</a></h3>
