@@ -77,15 +77,14 @@
         </td>
         <td>{{ rel.public|boolean_icon }}</td>
         <td>{{ rel.factory|boolean_icon }}</td>
-        <td>{% for note in rel.target.note_set.all %}
-            {{ note.body|safe }}
+        <td>{% if rel.target.note %}
+            {{ rel.target.note.body|safe }}
             {% if perms.note.can_add_note %}
-              <a target="_" href="{% url 'reports:repo_note_change' note.id %}?_popup=1"> (edit note)</a>
+              <a target="_" href="{% url 'reports:repo_note_change' rel.target.note.id %}?_popup=1"> (edit note)</a>
             {% endif %}
-            {% if not forloop.last %}<br/>{% endif %}
-            {% empty %}
+            {% else %}
               <a target="_" href="{% url 'reports:repo_note_add' %}?_popup=1&repo={{ rel.target.id }}"> (add new note)</a>
-            {% endfor %}
+            {% endif %}
         </td>
       </tr>
 

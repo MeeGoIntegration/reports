@@ -516,7 +516,7 @@ class RepoAdmin(admin.ModelAdmin):
             repos = repos.select_related(
                 'platform', 'server'
             ).prefetch_related(
-                'projects', "note_set")
+                'projects', "note")
             if repos.count():
                 plat_repos[p] = list(repos)
 
@@ -579,8 +579,8 @@ class RepoAdmin(admin.ModelAdmin):
         repo = Repo.objects.select_related(
             "server", "platform"
         ).prefetch_related(
-            "components", "containers", "projects", "note_set",
-            "platform__issuetracker_set", "graph_set"
+            "components", "containers", "projects", "note",
+            "platform__issuetrackers", "graphs"
         ).get(pk=repoid)
         filter_repos = set(request.GET.getlist("repo", None))
         filter_meta = _get_filter_meta(request.GET)
@@ -600,12 +600,12 @@ class RepoAdmin(admin.ModelAdmin):
             'container': repo,
             'container_packages': _regroup_repo_packages(
                 repo, pkgs=packages, repos=filter_repos, meta=filter_meta),
-            'notes': list(repo.note_set.all()),
+            'notes': list(Note.objects.filter(repo=repo)),
             'issue_ref': json.dumps(
                 [{'name': i.name, 're': i.re, 'url': i.url}
-                 for i in repo.platform.issuetracker_set.all()]
+                 for i in repo.platform.issuetrackers.all()]
             ),
-            'graphs': list(repo.graph_set.all()),
+            'graphs': list(repo.graphs.all()),
             'packagemetatypes': list(PackageMetaType.objects.all()),
             'request': request,
             'is_popup': request.GET.get('is_popup', False),
@@ -726,7 +726,7 @@ class RepoAdmin(admin.ModelAdmin):
 
         issue_ref = []
         names = []
-        for i in new_repo.platform.issuetracker_set.all():
+        for i in new_repo.platform.issuetrackers.all():
             if i.name not in names:
                 issue_ref.append(
                     {'name': i.name, 're': i.re, 'url': i.url}
@@ -828,7 +828,7 @@ class ImageAdmin(admin.ModelAdmin):
         ).get(pk=imageid)
         issue_ref = []
         for repo in img.repo.all():
-            for i in repo.platform.issuetracker_set.all():
+            for i in repo.platform.issuetrackers.all():
                 issue_ref.append({'name': i.name, 're': i.re, 'url': i.url})
         # FIXME None does not work in django 'in' lookup
         graphs = Graph.objects.filter(
@@ -878,7 +878,7 @@ class ImageAdmin(admin.ModelAdmin):
         issue_ref = []
         names = []
         for repo in new_img.repo.all():
-            for i in repo.platform.issuetracker_set.all():
+            for i in repo.platform.issuetrackers.all():
                 if i.name not in names:
                     issue_ref.append(
                         {'name': i.name, 're': i.re, 'url': i.url}

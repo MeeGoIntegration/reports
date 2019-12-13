@@ -63,8 +63,8 @@ def _find_previous_pkg_meta(graph):
     repos = Repo.objects.filter(platform__name=plat)\
         .exclude(release_date=None).order_by('-release')
     for r in repos:
-        if r.graph_set.count() > 0:
-            r_graph = r.graph_set.all()[0]
+        if r.graphs.count() > 0:
+            r_graph = r.graphs.all()[0]
         else:
             continue
         # return first that has pkg_meta set

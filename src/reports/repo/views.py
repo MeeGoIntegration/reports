@@ -31,7 +31,7 @@ class RepoServerViewSet(viewsets.ReadOnlyModelViewSet):
 class ReleaseViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = Pointer.objects.select_related("target")\
-        .prefetch_related("target__images", "target__note_set")\
+        .prefetch_related("target__images", "target__note")\
         .all().order_by("-target__release")
     serializer_class = ReleaseSerializer
 
@@ -39,7 +39,7 @@ class ReleaseViewSet(viewsets.ReadOnlyModelViewSet):
 def releases(request):
 
     releases = Pointer.objects.select_related("target")\
-        .prefetch_related("target__images", "target__note_set")\
+        .prefetch_related("target__images", "target__note")\
         .all().order_by("-target__release")
     paginator = Paginator(releases, 25)
 

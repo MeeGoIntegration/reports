@@ -121,9 +121,9 @@ class Repo(models.Model):
 
     @property
     def version(self):
-        pointer = list(self.pointer_set.all())
+        pointer = Pointer.objects.filter(target=self).first()
         if pointer:
-            return pointer[0].name
+            return pointer.name
         else:
             return None
 
@@ -355,7 +355,7 @@ class IssueTracker(models.Model):
     name = models.CharField(max_length=100, unique=True)
     re = models.CharField(max_length=100)
     url = models.CharField(max_length=200)
-    platform = models.ManyToManyField(Platform, blank=True)
+    platform = models.ManyToManyField(Platform, blank=True, related_name='issuetrackers')
 
 
 class Image(models.Model):
@@ -614,7 +614,7 @@ class Graph(models.Model):
     depth = models.PositiveIntegerField(blank=True, null=True, default=3)
     image = models.ForeignKey(Image, blank=True, null=True)
     packages = models.TextField(blank=True, null=True)
-    repo = models.ManyToManyField(Repo, blank=True)
+    repo = models.ManyToManyField(Repo, blank=True, related_name='graphs')
     dot = models.FileField(upload_to="graph")
     svg = models.FileField(upload_to="graph", null=True)
     pkg_meta = JSONField(blank=True, null=True)
