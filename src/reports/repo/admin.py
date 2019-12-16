@@ -12,6 +12,7 @@ from django.contrib import admin, messages
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files import File
+from django.core.files.storage import get_storage_class
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseNotAllowed, HttpResponse
 from django.template.response import TemplateResponse

@@ -41,10 +41,10 @@
 {% endif %}
 </p>
 <div>
-<a target="_blank" href="{{ MEDIA_URL }}{{ graph.dot }}">as DOT</a>
+<a target="_blank" href="{% get_media_prefix %}{{ graph.dot }}">as DOT</a>
 </div>
 <div>
-<img width="1280" src="{{ MEDIA_URL }}{{ graph.svg }}"/>
+<img width="1280" src="{% get_media_prefix %}{{ graph.svg }}"/>
 </div>
 </div>
 {% endblock %}

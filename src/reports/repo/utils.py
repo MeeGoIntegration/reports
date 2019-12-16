@@ -295,7 +295,7 @@ def _get_deps(sack, img, pacs, depth, direction):
 
 def _get_svg(dot, prog="neato"):
     _, svg_name = mkstemp()
-    dot_graph = pydot.graph_from_dot_data(open(dot).read())
+    dot_graph = pydot.graph_from_dot_data(open(dot).read())[0]
     dot_graph.set_maxiter('2000')
     dot_graph.write_svg(svg_name, prog=prog)
     return svg_name
@@ -379,7 +379,12 @@ def _get_project_dot(apiurl, projectname, done, cache):
     if projectname in cache:
         project = cache[projectname]
     else:
-        project = _get_project(bs, projectname)
+        try:
+            project = _get_project(bs, projectname)
+        except HTTPError as e:
+            if e.code == 404:
+                return []
+            raise
         cache[projectname] = project
 
     dot = []
@@ -429,7 +434,7 @@ def _graph_projects(platform, prjsack):
     projects = sorted(projects)
     prjids = sorted(prjids)
     dotfilename = os.path.join(
-        settings.MEDIA_ROOT, "graph", "%s_%s.dot" % (
+        "graph", "%s_%s.dot" % (
             str(platform.id), "_".join(prjids)
         )
     )
