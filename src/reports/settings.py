@@ -142,7 +142,9 @@ TEMPLATES = [
         'APP_DIRS': False,
         'OPTIONS': {
             'context_processors': [
-                "django.contrib.auth.context_processors.auth",
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
             ],
             'debug': DEBUG,
             'loaders': [
