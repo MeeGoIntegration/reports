@@ -470,8 +470,8 @@ def _find_obs_pkg(bs, pkg, src_project):
         return pkg
     else:
 
-        predicate = "(contains(@name , '%s')) and path/@project='%s'" % (
-            pkg, src_project
+        predicate = "@project='%s' and contains(@name, '%s')" % (
+            src_project, pkg
         )
         kwa = {path: predicate}
         print kwa
