@@ -32,7 +32,7 @@ class ReportsAdmin(AdminSite):
 
         # Add in each model's views, but without the app label
         valid_app_labels = set()
-        for model, model_admin in self._registry.iteritems():
+        for model, model_admin in self._registry.items():
             urlpatterns.append(
                 url(r'^%s/' % model._meta.model_name,
                     include(model_admin.urls))

@@ -5,16 +5,16 @@ import itertools
 import os
 import tempfile
 import traceback
-import urlparse
+import urllib.parse
 import weakref
 from collections import defaultdict, namedtuple
 
 import requests
 from lxml import etree
-from rpmUtils.miscutils import (
-    compareEVR, rangeCompare, splitFilename, stringToVersion
-)
-from yum import i18n
+#from rpmUtils.miscutils import (
+#    compareEVR, rangeCompare, splitFilename, stringToVersion
+#)
+#from yum import i18n
 
 
 class Session(object):

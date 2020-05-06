@@ -5,16 +5,16 @@ from collections import defaultdict
 from copy import copy
 
 import requests
-import yum
+#import yum
 from django.conf import settings
 from django.contrib.auth.backends import RemoteUserBackend
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
-from rpmUtils.miscutils import splitFilename
+#from rpmUtils.miscutils import splitFilename
 
-import buildservice
-import rpmmd
+#import buildservice
+import repo.rpmmd
 
 from .misc import (
     _find_containers, _fmt_chlog, _gen_abi, _get_latest_repo_pkg_meta,

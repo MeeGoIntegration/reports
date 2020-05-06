@@ -3,10 +3,10 @@ import os
 from collections import defaultdict, OrderedDict
 from copy import copy
 from tempfile import mkstemp
-from urllib2 import HTTPError
+from urllib.error import HTTPError
 
 import pydot
-import yum
+#import yum
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files import File
@@ -16,7 +16,7 @@ from django.dispatch import receiver
 from django.utils.safestring import mark_safe
 from osc import core
 
-import buildservice
+#import buildservice
 
 from .misc import (
     _exclude_by_meta, _find_comparable_component, _find_unmet_reqs, _fmt_chlog,
