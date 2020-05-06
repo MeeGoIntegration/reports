@@ -340,14 +340,14 @@ def _graph_post_save(sender, **kwargs):
             graph.dot and
             os.path.exists(os.path.join(settings.MEDIA_ROOT, graph.dot.name))
         ):
-            print "already exists"
+            print("already exists")
             return
         if graph.image:
             repos = graph.image.repo.all()
         elif graph.repo:
             repos = graph.repo.all()
         else:
-            print "neither image or repo"
+            print("neither image or repo")
             return
 
         packages = None
@@ -458,7 +458,7 @@ def _find_obs_pkg(bs, pkg, src_project):
     # search predicate
     predicate = "(@name = '%s') and path/@project='%s'" % (pkg, src_project)
     kwa = {path: predicate}
-    print kwa
+    print(kwa)
     # osc search function wants keyword args
     result = core.search(bs.apiurl, **kwa)
     # obs search will return results from subprojects as well,
@@ -474,7 +474,7 @@ def _find_obs_pkg(bs, pkg, src_project):
             pkg, src_project
         )
         kwa = {path: predicate}
-        print kwa
+        print(kwa)
         # osc search function wants keyword args
         result = core.search(bs.apiurl, **kwa)
         # obs search will return results from subprojects as well,
@@ -535,8 +535,8 @@ def _creq(new_repo, old_repo, submit, delete, comment):
         tgt_prj_pkgs = bs.getPackageList(str(tgt_prj.name))
 
         if pkg not in src_prj_pkgs:
-            print pkg
-            print src_prj
+            print(pkg)
+            print(src_prj)
             pkg = _find_obs_pkg(bs, pkg, src_prj.name)
             if not pkg:
                 messages.append(
@@ -577,7 +577,7 @@ def _creq(new_repo, old_repo, submit, delete, comment):
                 'tgt_package': pkg,
             }
         )
-    print options
+    print(options)
     all_actions = []
     tgts = []
     for tgt, actions in options.items():
@@ -598,7 +598,7 @@ def _creq(new_repo, old_repo, submit, delete, comment):
                     weburl, req.reqid, req.reqid, ", ".join(tgts)))
         )
 
-    except HTTPError, err:
+    except HTTPError as err:
         status = etree.fromstring(err.read())
         errors.append(
             "Error while creating request: %s" % status.find(("summary")).text

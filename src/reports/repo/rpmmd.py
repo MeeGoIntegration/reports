@@ -300,7 +300,7 @@ class Repo(object):
                 ),
                 verify=False
             )
-            print req.url
+            print(req.url)
             if not req.status_code == requests.codes.ok:
                 req.raise_for_status()
 
@@ -328,7 +328,7 @@ class Repo(object):
                 urlparse.urljoin(self.baseurl, "repodata/repomd.xml"),
                 verify=False
             )
-            print req.url
+            print(req.url)
             if req.status_code == requests.codes.ok:
                 self._repomd = etree.fromstring(req.content)
                 self.revision = self._repomd.find("{*}revision").text

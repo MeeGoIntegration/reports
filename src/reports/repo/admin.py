@@ -443,9 +443,9 @@ class ABIAdmin(admin.ModelAdmin):
         return my_urls + urls
 
     def abi_export(self, request, pk):
-        print pk
+        print(pk)
         abi = ABI.objects.get(pk=pk)
-        print abi
+        print(abi)
         return HttpResponse(
             json.dumps(abi.listing),
             content_type='application/json',

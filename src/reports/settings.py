@@ -1,5 +1,5 @@
 # Django settings for reports project.
-import ConfigParser
+import configparser
 import json
 from os.path import dirname, expanduser, isabs, isdir, isfile, join, split
 
@@ -7,7 +7,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 PROJECT_DIR = dirname(__file__)
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 # Read defaults
 config.readfp(open(join(PROJECT_DIR, "reports.conf")))
 # Read overrides from etc and local file for developement setup
