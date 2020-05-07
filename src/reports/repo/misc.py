@@ -1,8 +1,8 @@
 import datetime
 from collections import defaultdict, OrderedDict
 
-import rpmUtils.miscutils
-import yum
+#import rpmUtils.miscutils
+#import yum
 
 
 def _get_pkg_meta(pkg, platforms, repo_pkg_meta):

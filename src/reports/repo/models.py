@@ -1,20 +1,20 @@
 import datetime
 import os
-import urlparse
+import urllib.parse
 from collections import defaultdict
 from copy import copy
 
 import requests
-import yum
+#import yum
 from django.conf import settings
 from django.contrib.auth.backends import RemoteUserBackend
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
-from rpmUtils.miscutils import splitFilename
+#from rpmUtils.miscutils import splitFilename
 
-import buildservice
-import rpmmd
+#import buildservice
+import repo.rpmmd
 
 from .misc import (
     _find_containers, _fmt_chlog, _gen_abi, _get_latest_repo_pkg_meta,
@@ -272,7 +272,7 @@ class Repo(models.Model):
             for arch in archs:
                 yumrepoid = self.yumrepoid
                 yumrepourl = self.yumrepourl.replace("@ARCH@", arch)
-                print yumrepourl
+                print(yumrepourl)
                 cachedir = os.path.join(
                     yum.misc.getCacheDir(tmpdir=settings.YUM_CACHE_DIR),
                     self.yumrepoid, str(arch),
@@ -282,8 +282,8 @@ class Repo(models.Model):
                         yumrepoid, yumrepourl, cachedir=cachedir
                     )
                     self._yumrepos.append(yumrepo)
-                except requests.exceptions.RequestException, exc:
-                    print exc
+                except requests.exceptions.RequestException as exc:
+                    print(exc)
 
         return self._yumrepos
 
@@ -510,7 +510,7 @@ class Image(models.Model):
             _repos.add(os.path.dirname(url))
 
         for urlline in _repos:
-            print urlline
+            print(urlline)
             for arch in archs:
                 urlline = urlline.replace(arch, '@ARCH@')
             parts = urlparse.urlsplit(urlline)
@@ -538,9 +538,9 @@ class Image(models.Model):
                         split_path = path.split("/")
 
                         while not found and split_path:
-                            print pointer.name
-                            print repo_split_path
-                            print split_path
+                            print(pointer.name)
+                            print(repo_split_path)
+                            print(split_path)
                             if split_path == repo_split_path:
                                 found_repos.add(repo)
                                 found = True

@@ -5,16 +5,16 @@ import itertools
 import os
 import tempfile
 import traceback
-import urlparse
+import urllib.parse
 import weakref
 from collections import defaultdict, namedtuple
 
 import requests
 from lxml import etree
-from rpmUtils.miscutils import (
-    compareEVR, rangeCompare, splitFilename, stringToVersion
-)
-from yum import i18n
+#from rpmUtils.miscutils import (
+#    compareEVR, rangeCompare, splitFilename, stringToVersion
+#)
+#from yum import i18n
 
 
 class Session(object):
@@ -300,7 +300,7 @@ class Repo(object):
                 ),
                 verify=False
             )
-            print req.url
+            print(req.url)
             if not req.status_code == requests.codes.ok:
                 req.raise_for_status()
 
@@ -328,7 +328,7 @@ class Repo(object):
                 urlparse.urljoin(self.baseurl, "repodata/repomd.xml"),
                 verify=False
             )
-            print req.url
+            print(req.url)
             if req.status_code == requests.codes.ok:
                 self._repomd = etree.fromstring(req.content)
                 self.revision = self._repomd.find("{*}revision").text
