@@ -2,7 +2,6 @@ import datetime
 from collections import defaultdict, OrderedDict
 
 #import rpmUtils.miscutils
-#import yum
 
 
 def _get_pkg_meta(pkg, platforms, repo_pkg_meta):
@@ -64,12 +63,20 @@ def _fmt_chlog(chlog):
     for item in chlog:
         tm = datetime.date.fromtimestamp(int(item[0]))
         flat.append("* %s %s" % (
-            tm.strftime("%a %b %d %Y"), yum.misc.to_unicode(item[1]))
+            tm.strftime("%a %b %d %Y"), _to_unicode(item[1]))
         )
-        flat.extend([yum.misc.to_unicode(line)
+        flat.extend([_to_unicode(line)
                      for line in item[2].splitlines()])
         flat.append("")
     return flat
+
+
+# Lifted from yum
+def _to_unicode(obj, encoding='utf-8', errors='replace'):
+    if isinstance(obj, basestring):
+        if not isinstance(obj, unicode):
+            obj = unicode(obj, encoding, errors)
+    return obj
 
 
 # recursive function that given a list of repos,

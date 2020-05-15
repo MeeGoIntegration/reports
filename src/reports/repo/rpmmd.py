@@ -14,7 +14,6 @@ from lxml import etree
 #from rpmUtils.miscutils import (
 #    compareEVR, rangeCompare, splitFilename, stringToVersion
 #)
-#from yum import i18n
 
 
 class Session(object):
@@ -710,7 +709,7 @@ class Package(object):
         # find the named entry in pkgobj, do the comparsion
         result = []
         for (n, f, (e, v, r)) in self.prco.get(prcotype, []):
-            if not i18n.str_eq(reqn, n):
+            if not _str_eq(reqn, n):
                 continue
 
             if f == '=':
@@ -732,6 +731,21 @@ class Package(object):
                 result.append((n, f, (e, v, r)))
 
         return result
+
+    # Lifted from yum
+    def _str_eq(a, b):
+        if isinstance(a, unicode) == isinstance(b, unicode):
+            if a == b:
+                return True
+        elif _to_utf8(a) == _to_utf8(b):
+            return True
+        return False
+
+    # Lifted from yum
+    def _to_utf8(obj, errors='replace'):
+        if isinstance(obj, unicode):
+            obj = obj.encode('utf-8', errors)
+        return obj
 
 
 class Patterns(object):
