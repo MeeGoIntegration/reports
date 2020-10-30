@@ -683,10 +683,8 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
     removed = defaultdict(set)
     # { key_tuple : {
     #       ovr : old version ,
-    #       oa : old arch ,
     #       nvr : new version ,
-    #       na : new arch ,
-    #       chlo : changelog diff
+    #       chlog : changelog diff
     #   }
     # }
     modified = {}
@@ -775,12 +773,10 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
                                     "sense": "Updated"
                                     if pkg.verCMP(oldpkg) == 1 else "Reverted",
                                     "ovr": "%s-%s" % (oldpkg.ver, oldpkg.rel),
-                                    "oa": oldpkg.arch,
                                     "nvr": "%s-%s" % (pkg.ver, pkg.rel),
-                                    "na": pkg.arch,
                                     "ba": set(),
                                     "br": set(),
-                                    "chlo": chlog,
+                                    "chlog": chlog,
                                     "meta": _get_pkg_meta(
                                         pkg.base_package_name, platforms,
                                         repo_pkg_meta),
