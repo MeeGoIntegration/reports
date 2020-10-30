@@ -27,8 +27,9 @@ from .models import (
 from .utils import (
     _creq, _diff_sacks, _find_previous_pkg_meta, _get_dot, _get_filter_meta,
     _get_latest_image, _get_svg, _graph_projects, _sort_filter_diff,
-    _update_pkg_meta
+    _update_pkg_meta,
 )
+from .diff import _new_diff_sacks
 from reports import admin as reports_admin
 
 
@@ -635,7 +636,17 @@ class RepoAdmin(admin.ModelAdmin):
 
         is_popup = request.GET.get('is_popup', False)
         do_regen = request.GET.get('do_regen', False)
+        new_diff = request.GET.get('new_diff', False)
         progress_id = request.GET.get('progress_id', None)
+
+        cachekey = "%s%s%s" % ("repodiff", new_repoid, old_repoid)
+        if new_diff:
+            diff_function = _new_diff_sacks
+            diff_template = 'new_diff_content.html'
+            cachekey = "new" + cachekey
+        else:
+            diff_function = _diff_sacks
+            diff_template = 'diff_content.html'
 
         if not request.is_ajax() and request.method != 'POST':
             progress_id = uuid.uuid4()
@@ -645,6 +656,7 @@ class RepoAdmin(admin.ModelAdmin):
                 "app_label": self.model._meta.app_label,
                 "progress_id": progress_id,
                 "do_regen": do_regen,
+                "new_diff": new_diff,
             }
             return TemplateResponse(
                 request, 'diff.html',
@@ -678,6 +690,7 @@ class RepoAdmin(admin.ModelAdmin):
             'old_obj': old_repo,
             'live_diff': live_diff,
             'processing_time': end.total_seconds(),
+            'diff_template': diff_template,
             }
 
         if request.method == 'POST':
@@ -705,13 +718,13 @@ class RepoAdmin(admin.ModelAdmin):
             )
 
         progress_cb("Generating repository diff")
-        cachekey = "%s%s%s" % ("repodiff", new_repoid, old_repoid)
+
         cached = cache.get_many([cachekey, cachekey + 'ts'])
         diff = cached.get(cachekey)
         diffts = cached.get(cachekey + 'ts')
 
         if diff is None or do_regen:
-            diff = _diff_sacks(new_repo, old_repo, progress_cb)
+            diff = diff_function(new_repo, old_repo, progress_cb)
             diffts = datetime.datetime.now()
             cachelife = (60 * 3) if (
                 live_diff[0] or live_diff[1]
@@ -754,7 +767,7 @@ class RepoAdmin(admin.ModelAdmin):
 
         progress_cb("Done")
         return TemplateResponse(
-            request, "diff_content.html",
+            request, diff_template,
             context=context,
         )
 
