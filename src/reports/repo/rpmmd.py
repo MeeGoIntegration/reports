@@ -86,11 +86,10 @@ class RepoSack(object):
         return self.ns[kind]
 
     def search_name(self, query):
-        for repo in self.repos:
+        for pkgtup, po in self.packages:
             for name in query:
-                po = repo.packages.get(name, None)
-                if po:
-                    yield (name, po)
+                if name == po.name:
+                    yield (po.name, po)
 
     def search_basename(self, query):
         for repo in self.repos:
@@ -101,12 +100,10 @@ class RepoSack(object):
 
     def search_name_contains(self, query, casei):
         if casei:
-            for i, val in enumerate(query):
-                query[i] = val.lower()
+            query = [val.lower() for val in query]
 
-        for name, po in self.packages:
-            if casei:
-                name = name.lower()
+        for pkgtup, po in self.packages:
+            name = po.name.lower() if casei else po.name
             for res in itertools.ifilter(lambda q: q in name, query):
                 yield (res, po)
 
@@ -152,9 +149,8 @@ class RepoSack(object):
         return self.search_name(pkgnames)
 
     def searchNames(self, name):
-        for repo in self.repos:
-            po = repo.packages.get(name, None)
-            if po:
+        for pkgtup, po in self.packages:
+            if name == po.name:
                 yield po
 
     # Yum API emulation
@@ -165,17 +161,17 @@ class RepoSack(object):
 
     def returnNewestByName(self, name=None):
         newest = {}
-        for key, pkg in self.packages:
-            if name is not None and name != key:
+        for pkgtup, po in self.packages:
+            if name is not None and name != po.name:
                 continue
 
             cval = 1
-            if key in newest:
-                cval = pkg.verCMP(newest[key][0])
+            if po.name in newest:
+                cval = po.verCMP(newest[po.name][0])
             if cval > 0:
-                newest[key] = [pkg]
+                newest[po.name] = [po]
             elif cval == 0:
-                newest[key].append(pkg)
+                newest[po.name].append(po)
         ret = []
         for vals in newest.itervalues():
             ret.extend(vals)
@@ -433,12 +429,18 @@ class Repo(object):
     def _parse_chlog(self, xml):
         if xml is None:
             return
-        name = xml.attrib['name']
-        po = self.packages.get(name, None)
+        version = xml.find('{*}version')
+        evrtup = EVR(
+            version.attrib['epoch'],
+            version.attrib['ver'],
+            version.attrib['rel'],
+        )
+        pkgtup = (xml.attrib['name'], xml.attrib['arch']) + evrtup
+        po = self.packages.get(pkgtup, None)
         if po:
-            basename = po.basename
-            if basename not in self._changelogs:
-                self._changelogs[basename] = [
+            basetup = (po.basename,) + evrtup
+            if basetup not in self._changelogs:
+                self._changelogs[basetup] = [
                     Changelog(
                         entry.attrib['date'],
                         entry.attrib['author'],
@@ -448,18 +450,20 @@ class Repo(object):
 
     @property
     def provides(self):
+        # TODO should consider package arch and version too, not just name
         if self._providx is None:
             self._providx = {}
-            for name, po in self.packages.viewitems():
+            for po in self.packages.viewvalues():
                 for prov in po.provides:
                     self._providx[prov.name] = po
         return self._providx
 
     @property
     def requires(self):
+        # TODO should consider package arch and version too, not just name
         if self._reqidx is None:
             self._reqidx = {}
-            for name, po in self.packages.viewitems():
+            for po in self.packages.viewvalues():
                 for req in po.requires:
                     self._reqidx[req.name] = po
         return self._reqidx
@@ -532,7 +536,7 @@ class Package(object):
                 setattr(self, etree.QName(elem.tag).localname, elem.text)
 
         if not self.arch == "src":
-            self.repo._packages[self.name] = self
+            self.repo._packages[self.pkgtup] = self
 
     def __repr__(self):
         return "<Package: %s %s %s>" % (self.name, self.arch, self.version)
@@ -679,7 +683,8 @@ class Package(object):
 
     @property
     def changelog(self):
-        return self.repo.changelogs.get(self.basename, [])
+        basetup = (self.basename,) + self.version
+        return self.repo.changelogs.get(basetup, [])
 
     @property
     def prco(self):
