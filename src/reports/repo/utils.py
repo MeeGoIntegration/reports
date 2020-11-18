@@ -303,6 +303,9 @@ def _get_svg(dot, prog="neato"):
 
 @receiver(pre_save)
 def _graph_pre_save(sender, **kwargs):
+    if kwargs.get('raw', False):
+        # in loaddata
+        return
     if sender.__name__ == "Graph" and not kwargs['raw']:
         graph = kwargs["instance"]
         if graph.dot and os.path.exists(
@@ -334,6 +337,9 @@ def _graph_pre_save(sender, **kwargs):
 
 @receiver(post_save)
 def _graph_post_save(sender, **kwargs):
+    if kwargs.get('raw', False):
+        # in loaddata
+        return
     if sender.__name__ == "Graph":
         graph = kwargs["instance"]
         if (
