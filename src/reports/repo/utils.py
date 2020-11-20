@@ -2,11 +2,11 @@ import math
 import os
 from collections import defaultdict, OrderedDict
 from copy import copy
+from itertools import chain
 from tempfile import mkstemp
 from urllib2 import HTTPError
 
 import pydot
-import yum
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files import File
@@ -23,6 +23,7 @@ from .misc import (
     _get_pkg_meta
 )
 from .models import Arch, Graph, Image, PackageMetaType, Repo
+from .rpmmd import RepoSack
 
 try:
     from lxml import etree
@@ -179,9 +180,8 @@ def _get_trace(old_repo, new_repo):
 # lifted from repo-graph from yum-utils
 def _get_dot(repos, img, pacs, depth, direction):
 
-    sack = yum.packageSack.ListPackageSack()
-    for repo in repos:
-        sack.addList(repo.yumsack.returnPackages())
+    yumrepos = list(chain.from_iterable(r.yumrepos for r in repos))
+    sack = RepoSack(yumrepos)
 
     dot = [
         'digraph packages {',
@@ -242,11 +242,11 @@ def _get_deps(sack, img, pacs, depth, direction):
 
     def _get_requires(pkg):
         xx = {}
-        for r in pkg.returnPrco(prco):
+        for r in pkg.prco[prco]:
             reqname = str(r[0])
             if reqname in skip:
                 continue
-            provider = sack.searchPrco(reqname, xprco)
+            provider = sack.getPrco(xprco, reqname)
             if not provider:
                 continue
             for p in provider:

@@ -1,8 +1,42 @@
 import datetime
 from collections import defaultdict, OrderedDict
+import os
+import glob
+import pwd
+import stat
+import tempfile
 
-import rpmUtils.miscutils
-import yum
+from .rpmutils import rpmvercmp
+
+
+# TODO drop this on python3 port
+def to_unicode(astr):
+    if isinstance(astr, unicode):
+        return astr
+    return unicode(astr, 'utf-8', 'replace')
+
+
+def _get_cache_dir(tmpdir='/var/tmp'):
+    uid = os.geteuid()
+    usertup = pwd.getpwuid(uid)
+    username = usertup[0]
+
+    # check for existing dir
+    prefix = '%s-' % username
+    dirpath = '%s/%s*' % (tmpdir, prefix)
+    cachedirs = sorted(glob.glob(dirpath))
+    for thisdir in cachedirs:
+        stats = os.lstat(thisdir)
+        if (
+                stat.S_ISDIR(stats[0]) and
+                stat.S_IMODE(stats[0]) == 448 and
+                stats[4] == uid
+        ):
+            return thisdir
+
+    # make the dir (tempfile.mkdtemp())
+    cachedir = tempfile.mkdtemp(prefix=prefix, dir=tmpdir)
+    return cachedir
 
 
 def _get_pkg_meta(pkg, platforms, repo_pkg_meta):
@@ -56,7 +90,7 @@ def _fmt_chlog(chlog):
         return x
 
     chlog.sort(
-        cmp=rpmUtils.miscutils.compareVerOnly,
+        cmp=rpmvercmp,
         key=_get_chlog_ver,
         reverse=True,
     )
@@ -64,9 +98,9 @@ def _fmt_chlog(chlog):
     for item in chlog:
         tm = datetime.date.fromtimestamp(int(item[0]))
         flat.append("* %s %s" % (
-            tm.strftime("%a %b %d %Y"), yum.misc.to_unicode(item[1]))
+            tm.strftime("%a %b %d %Y"), to_unicode(item[1]))
         )
-        flat.extend([yum.misc.to_unicode(line)
+        flat.extend([to_unicode(line)
                      for line in item[2].splitlines()])
         flat.append("")
     return flat
