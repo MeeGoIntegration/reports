@@ -279,7 +279,8 @@ class Repo(models.Model):
                 )
                 try:
                     yumrepo = rpmmd.Repo(
-                        yumrepoid, yumrepourl, cachedir=cachedir
+                        yumrepoid, yumrepourl, cachedir=cachedir,
+                        ssl_verify=settings.SSL_VERIFY,
                     )
                     self._yumrepos.append(yumrepo)
                 except requests.exceptions.RequestException, exc:
