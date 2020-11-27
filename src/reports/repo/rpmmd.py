@@ -247,7 +247,7 @@ class RepoSack(object):
 
 
 class Repo(object):
-    def __init__(self, repoid, baseurl, cachedir=None):
+    def __init__(self, repoid, baseurl, cachedir=None, ssl_verify=True):
         self.repoid = repoid
         self.baseurl = baseurl
         if not baseurl.endswith("/"):
@@ -260,6 +260,7 @@ class Repo(object):
             os.makedirs(cachedir)
 
         self._cachedir = cachedir
+        self._ssl_verify = ssl_verify
         self._revision = 0
         self._repomd = None
         self._mds = None
@@ -305,7 +306,7 @@ class Repo(object):
                 urlparse.urljoin(
                     self.baseurl, mdfile.find("{*}location").attrib["href"]
                 ),
-                verify=False
+                verify=self._ssl_verify,
             )
             print req.url
             if not req.status_code == requests.codes.ok:
@@ -333,7 +334,7 @@ class Repo(object):
         if self._repomd is None:
             req = Session().session.get(
                 urlparse.urljoin(self.baseurl, "repodata/repomd.xml"),
-                verify=False
+                verify=self._ssl_verify,
             )
             print req.url
             if req.status_code == requests.codes.ok:

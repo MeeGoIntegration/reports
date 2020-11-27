@@ -41,6 +41,8 @@ if not isdir(YUM_CACHE_DIR):
         'YUM_CACHE_DIR %s is not directory' % YUM_CACHE_DIR
     )
 
+SSL_VERIFY = config.getboolean('base', 'ssl_verify')
+
 _db_options = json.loads(config.get('db', 'options'))
 DATABASES = {
     'default': {
