@@ -1,12 +1,13 @@
 import datetime
 from collections import defaultdict, OrderedDict
+from operator import attrgetter
 import os
 import glob
 import pwd
 import stat
 import tempfile
 
-from .rpmutils import rpmvercmp
+from .rpmutils import evrcmp
 
 
 # TODO drop this on python3 port
@@ -78,30 +79,23 @@ def _find_repo_by_id(repo, repoid):
 
 
 def _fmt_chlog(chlog):
-
-    def _get_chlog_ver(item):
-        x = "0"
-        if "> -" in item[1]:
-            x = item[1].rsplit("> -", 1)[-1].strip()
-        elif "> " in item[1]:
-            x = item[1].rsplit("> ", 1)[-1].strip()
-        if "-" in x:
-            x = x.rsplit("-", 1)[0]
-        return x
-
     chlog.sort(
-        cmp=rpmvercmp,
-        key=_get_chlog_ver,
+        cmp=evrcmp,
+        key=attrgetter('version'),
         reverse=True,
     )
     flat = []
     for item in chlog:
-        tm = datetime.date.fromtimestamp(int(item[0]))
-        flat.append("* %s %s" % (
-            tm.strftime("%a %b %d %Y"), to_unicode(item[1]))
+        tm = datetime.date.fromtimestamp(int(item.time))
+        flat.append(
+            "* %s %s - %s" % (
+                tm.strftime("%a %b %d %Y"),
+                to_unicode(item.author),
+                item.version
+            )
         )
         flat.extend([to_unicode(line)
-                     for line in item[2].splitlines()])
+                     for line in item.text.splitlines()])
         flat.append("")
     return flat
 

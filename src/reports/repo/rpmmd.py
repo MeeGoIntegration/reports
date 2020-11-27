@@ -439,8 +439,9 @@ class Repo(object):
             if basename not in self._changelogs:
                 self._changelogs[basename] = [
                     Changelog(
-                        entry.attrib['date'], entry.attrib['author'],
-                        entry.text
+                        entry.attrib['date'],
+                        *_split_chlog_author(entry.attrib['author']),
+                        text=entry.text
                     ) for entry in xml.iterfind("{*}changelog")
                 ]
 
@@ -463,7 +464,17 @@ class Repo(object):
         return self._reqidx
 
 
-Changelog = namedtuple("Changelog", ["time", "author", "text"])
+def _split_chlog_author(author_version):
+    try:
+        author, version = author_version.rsplit(None, 1)
+    except ValueError:
+        author = author_version
+        version = '0'
+    author = author.rstrip(' -')
+    return author, version
+
+
+Changelog = namedtuple("Changelog", ["time", "author", "version", "text"])
 
 
 class Capability(namedtuple("Capability", ["name", "flag", "EVR"])):
