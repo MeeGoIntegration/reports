@@ -2,11 +2,11 @@ import math
 import os
 from collections import defaultdict, OrderedDict
 from copy import copy
+from itertools import chain
 from tempfile import mkstemp
 from urllib2 import HTTPError
 
 import pydot
-import yum
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files import File
@@ -23,6 +23,7 @@ from .misc import (
     _get_pkg_meta
 )
 from .models import Arch, Graph, Image, PackageMetaType, Repo
+from .rpmmd import RepoSack
 
 try:
     from lxml import etree
@@ -179,9 +180,8 @@ def _get_trace(old_repo, new_repo):
 # lifted from repo-graph from yum-utils
 def _get_dot(repos, img, pacs, depth, direction):
 
-    sack = yum.packageSack.ListPackageSack()
-    for repo in repos:
-        sack.addList(repo.yumsack.returnPackages())
+    yumrepos = list(chain.from_iterable(r.yumrepos for r in repos))
+    sack = RepoSack(yumrepos)
 
     dot = [
         'digraph packages {',
@@ -242,11 +242,11 @@ def _get_deps(sack, img, pacs, depth, direction):
 
     def _get_requires(pkg):
         xx = {}
-        for r in pkg.returnPrco(prco):
+        for r in pkg.prco[prco]:
             reqname = str(r[0])
             if reqname in skip:
                 continue
-            provider = sack.searchPrco(reqname, xprco)
+            provider = sack.getPrco(xprco, reqname)
             if not provider:
                 continue
             for p in provider:
@@ -303,6 +303,9 @@ def _get_svg(dot, prog="neato"):
 
 @receiver(pre_save)
 def _graph_pre_save(sender, **kwargs):
+    if kwargs.get('raw', False):
+        # in loaddata
+        return
     if sender.__name__ == "Graph" and not kwargs['raw']:
         graph = kwargs["instance"]
         if graph.dot and os.path.exists(
@@ -334,6 +337,9 @@ def _graph_pre_save(sender, **kwargs):
 
 @receiver(post_save)
 def _graph_post_save(sender, **kwargs):
+    if kwargs.get('raw', False):
+        # in loaddata
+        return
     if sender.__name__ == "Graph":
         graph = kwargs["instance"]
         if (
@@ -677,10 +683,8 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
     removed = defaultdict(set)
     # { key_tuple : {
     #       ovr : old version ,
-    #       oa : old arch ,
     #       nvr : new version ,
-    #       na : new arch ,
-    #       chlo : changelog diff
+    #       chlog : changelog diff
     #   }
     # }
     modified = {}
@@ -769,12 +773,10 @@ def _diff_sacks(newrepo, oldrepo, progress_cb):
                                     "sense": "Updated"
                                     if pkg.verCMP(oldpkg) == 1 else "Reverted",
                                     "ovr": "%s-%s" % (oldpkg.ver, oldpkg.rel),
-                                    "oa": oldpkg.arch,
                                     "nvr": "%s-%s" % (pkg.ver, pkg.rel),
-                                    "na": pkg.arch,
                                     "ba": set(),
                                     "br": set(),
-                                    "chlo": chlog,
+                                    "chlog": chlog,
                                     "meta": _get_pkg_meta(
                                         pkg.base_package_name, platforms,
                                         repo_pkg_meta),

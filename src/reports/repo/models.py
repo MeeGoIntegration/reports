@@ -5,20 +5,20 @@ from collections import defaultdict
 from copy import copy
 
 import requests
-import yum
+
 from django.conf import settings
 from django.contrib.auth.backends import RemoteUserBackend
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
-from rpmUtils.miscutils import splitFilename
 
 import buildservice
-import rpmmd
+from . import rpmmd
+from .rpmutils import split_rpm_filename
 
 from .misc import (
     _find_containers, _fmt_chlog, _gen_abi, _get_latest_repo_pkg_meta,
-    _get_pkg_meta, _leaf_components, _release_date
+    _get_pkg_meta, _leaf_components, _release_date, _get_cache_dir,
 )
 
 try:
@@ -274,12 +274,13 @@ class Repo(models.Model):
                 yumrepourl = self.yumrepourl.replace("@ARCH@", arch)
                 print yumrepourl
                 cachedir = os.path.join(
-                    yum.misc.getCacheDir(tmpdir=settings.YUM_CACHE_DIR),
+                    _get_cache_dir(tmpdir=settings.YUM_CACHE_DIR),
                     self.yumrepoid, str(arch),
                 )
                 try:
                     yumrepo = rpmmd.Repo(
-                        yumrepoid, yumrepourl, cachedir=cachedir
+                        yumrepoid, yumrepourl, cachedir=cachedir,
+                        ssl_verify=settings.SSL_VERIFY,
                     )
                     self._yumrepos.append(yumrepo)
                 except requests.exceptions.RequestException, exc:
@@ -430,7 +431,7 @@ class Image(models.Model):
         _bpkgs = []
         for line in self.urls.splitlines():
             rpm_name = os.path.basename(line.strip())
-            name, version, release, epoch, arch = splitFilename(rpm_name)
+            name, version, release, epoch, arch = split_rpm_filename(rpm_name)
             _bpkgs.append(name)
         return _bpkgs
 

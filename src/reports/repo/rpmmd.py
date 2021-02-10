@@ -11,10 +11,8 @@ from collections import defaultdict, namedtuple
 
 import requests
 from lxml import etree
-from rpmUtils.miscutils import (
-    compareEVR, rangeCompare, splitFilename, stringToVersion
-)
-from yum import i18n
+
+from .rpmutils import evrcmp, EVR, split_rpm_filename
 
 
 class Session(object):
@@ -29,6 +27,15 @@ class Session(object):
         if self._session is None:
             self._session = requests.Session()
         return self._session
+
+
+def str_eq(a, b):
+    # TODO drop this on python3 port
+    if isinstance(a, unicode):
+        a = a.encode('utf-8', 'replace')
+    if isinstance(b, unicode):
+        b = b.encode('utf-8', 'replace')
+    return a == b
 
 
 def fast_iter(context):
@@ -225,8 +232,8 @@ class RepoSack(object):
         """return dict { packages -> list of matching provides }"""
         if version is None:
             version = (None, None, None)
-        elif type(version) in (str, type(None), unicode):
-            version = stringToVersion(version)
+        elif isinstance(version, basestring):
+            version = EVR.from_string(version)
         result = {}
         for po in self.returnPackages():
             hits = po.matchingPrcos(kind, (name, flags, version))
@@ -240,7 +247,7 @@ class RepoSack(object):
 
 
 class Repo(object):
-    def __init__(self, repoid, baseurl, cachedir=None):
+    def __init__(self, repoid, baseurl, cachedir=None, ssl_verify=True):
         self.repoid = repoid
         self.baseurl = baseurl
         if not baseurl.endswith("/"):
@@ -253,6 +260,7 @@ class Repo(object):
             os.makedirs(cachedir)
 
         self._cachedir = cachedir
+        self._ssl_verify = ssl_verify
         self._revision = 0
         self._repomd = None
         self._mds = None
@@ -298,7 +306,7 @@ class Repo(object):
                 urlparse.urljoin(
                     self.baseurl, mdfile.find("{*}location").attrib["href"]
                 ),
-                verify=False
+                verify=self._ssl_verify,
             )
             print req.url
             if not req.status_code == requests.codes.ok:
@@ -326,7 +334,7 @@ class Repo(object):
         if self._repomd is None:
             req = Session().session.get(
                 urlparse.urljoin(self.baseurl, "repodata/repomd.xml"),
-                verify=False
+                verify=self._ssl_verify,
             )
             print req.url
             if req.status_code == requests.codes.ok:
@@ -432,8 +440,9 @@ class Repo(object):
             if basename not in self._changelogs:
                 self._changelogs[basename] = [
                     Changelog(
-                        entry.attrib['date'], entry.attrib['author'],
-                        entry.text
+                        entry.attrib['date'],
+                        entry.attrib['author'],
+                        text=entry.text
                     ) for entry in xml.iterfind("{*}changelog")
                 ]
 
@@ -456,12 +465,20 @@ class Repo(object):
         return self._reqidx
 
 
-Changelog = namedtuple("Changelog", ["time", "author", "text"])
-EVR = namedtuple("EVR", ["epoch", "ver", "rel"])
+class Changelog(namedtuple("Changelog", ["time", "author_version", "text"])):
+    def __init__(self, *args, **kwargs):
+        super(Changelog, self).__init__(*args, **kwargs)
+        try:
+            author, version = self.author_version.rsplit(None, 1)
+        except ValueError:
+            author = self.author_version
+            version = '0'
+        author = author.rstrip(' -')
+        self.author = author
+        self.version = version
 
 
 class Capability(namedtuple("Capability", ["name", "flag", "EVR"])):
-
     def __str__(self):
 
         e, v, r = self.EVR
@@ -475,16 +492,7 @@ class Capability(namedtuple("Capability", ["name", "flag", "EVR"])):
         if self.flag is None:
             return self.name
 
-        s = ""
-
-        if e not in [0, '0', None]:
-            s += '%s:' % e
-        if v is not None:
-            s += '%s' % v
-        if r is not None:
-            s += '-%s' % r
-
-        return '%s %s %s' % (self.name, flags[self.flag], s)
+        return '%s %s %s' % (self.name, flags[self.flag], self.EVR)
 
 
 class Package(object):
@@ -541,7 +549,7 @@ class Package(object):
     @property
     def basename(self):
         if self.sourcerpm:
-            return splitFilename(str(self.sourcerpm))[0]
+            return split_rpm_filename(str(self.sourcerpm))[0]
         else:
             return self.name
 
@@ -700,7 +708,7 @@ class Package(object):
         }
 
     def verCMP(self, other):
-        return compareEVR(self.version, other.version)
+        return evrcmp(self.version, other.version)
 
     def inPrcoRange(self, prcotype, reqtuple):
         return bool(self.matchingPrcos(prcotype, reqtuple))
@@ -710,7 +718,7 @@ class Package(object):
         # find the named entry in pkgobj, do the comparsion
         result = []
         for (n, f, (e, v, r)) in self.prco.get(prcotype, []):
-            if not i18n.str_eq(reqn, n):
+            if not str_eq(reqn, n):
                 continue
 
             if f == '=':
@@ -791,3 +799,81 @@ class Patterns(object):
     @items.setter
     def items(self, value):
         self._items = value
+
+
+# Copied from rpmUtils.miscutils
+# TODO This looks overly complicated, I'm sure we can do better...
+def rangeCompare(reqtuple, provtuple):
+    """returns true if provtuple satisfies reqtuple"""
+    (reqn, reqf, (reqe, reqv, reqr)) = reqtuple
+    (n, f, (e, v, r)) = provtuple
+    if reqn != n:
+        return 0
+
+    # unversioned satisfies everything
+    if not f or not reqf:
+        return 1
+
+    # and you thought we were done having fun
+    # if the requested release is left out then we have
+    # to remove release from the package prco to make sure the match
+    # is a success - ie: if the request is EQ foo 1:3.0.0 and we have
+    # foo 1:3.0.0-15 then we have to drop the 15 so we can match
+    if reqr is None:
+        r = None
+    if reqe is None:
+        e = None
+    # just for the record if ver is None then we're going to segfault
+    if reqv is None:
+        v = None
+
+    # if we just require foo-version, then foo-version-* will match
+    if r is None:
+        reqr = None
+
+    rc = evrcmp(EVR(e, v, r), EVR(reqe, reqv, reqr))
+
+    # does not match unless
+    if rc >= 1:
+        if reqf in ['GT', 'GE', 4, 12, '>', '>=']:
+            return 1
+        if reqf in ['EQ', 8, '=']:
+            if f in ['LE', 10, 'LT', 2, '<=', '<']:
+                return 1
+        if reqf in ['LE', 'LT', 'EQ', 10, 2, 8, '<=', '<', '=']:
+            if f in ['LE', 'LT', 10, 2, '<=', '<']:
+                return 1
+
+    if rc == 0:
+        if reqf in ['GT', 4, '>']:
+            if f in ['GT', 'GE', 4, 12, '>', '>=']:
+                return 1
+        if reqf in ['GE', 12, '>=']:
+            if f in ['GT', 'GE', 'EQ', 'LE', 4, 12, 8, 10, '>', '>=', '=', '<=']:
+                return 1
+        if reqf in ['EQ', 8, '=']:
+            if f in ['EQ', 'GE', 'LE', 8, 12, 10, '=', '>=', '<=']:
+                return 1
+        if reqf in ['LE', 10, '<=']:
+            if f in ['EQ', 'LE', 'LT', 'GE', 8, 10, 2, 12, '=', '<=', '<', '>=']:
+                return 1
+        if reqf in ['LT', 2, '<']:
+            if f in ['LE', 'LT', 10, 2, '<=', '<']:
+                return 1
+    if rc <= -1:
+        if reqf in ['GT', 'GE', 'EQ', 4, 12, 8, '>', '>=', '=']:
+            if f in ['GT', 'GE', 4, 12, '>', '>=']:
+                return 1
+        if reqf in ['LE', 'LT', 10, 2, '<=', '<']:
+            return 1
+#                if rc >= 1:
+#                    if reqf in ['GT', 'GE', 4, 12, '>', '>=']:
+#                        return 1
+#                if rc == 0:
+#                    if reqf in ['GE', 'LE', 'EQ', 8, 10, 12, '>=', '<=', '=']:
+#                        return 1
+#                if rc <= -1:
+#                    if reqf in ['LT', 'LE', 2, 10, '<', '<=']:
+#                        return 1
+
+    return 0

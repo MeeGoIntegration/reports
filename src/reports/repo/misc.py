@@ -1,8 +1,43 @@
 import datetime
 from collections import defaultdict, OrderedDict
+from operator import attrgetter
+import os
+import glob
+import pwd
+import stat
+import tempfile
 
-import rpmUtils.miscutils
-import yum
+from .rpmutils import evrcmp
+
+
+# TODO drop this on python3 port
+def to_unicode(astr):
+    if isinstance(astr, unicode):
+        return astr
+    return unicode(astr, 'utf-8', 'replace')
+
+
+def _get_cache_dir(tmpdir='/var/tmp'):
+    uid = os.geteuid()
+    usertup = pwd.getpwuid(uid)
+    username = usertup[0]
+
+    # check for existing dir
+    prefix = '%s-' % username
+    dirpath = '%s/%s*' % (tmpdir, prefix)
+    cachedirs = sorted(glob.glob(dirpath))
+    for thisdir in cachedirs:
+        stats = os.lstat(thisdir)
+        if (
+                stat.S_ISDIR(stats[0]) and
+                stat.S_IMODE(stats[0]) == 448 and
+                stats[4] == uid
+        ):
+            return thisdir
+
+    # make the dir (tempfile.mkdtemp())
+    cachedir = tempfile.mkdtemp(prefix=prefix, dir=tmpdir)
+    return cachedir
 
 
 def _get_pkg_meta(pkg, platforms, repo_pkg_meta):
@@ -44,30 +79,23 @@ def _find_repo_by_id(repo, repoid):
 
 
 def _fmt_chlog(chlog):
-
-    def _get_chlog_ver(item):
-        x = "0"
-        if "> -" in item[1]:
-            x = item[1].rsplit("> -", 1)[-1].strip()
-        elif "> " in item[1]:
-            x = item[1].rsplit("> ", 1)[-1].strip()
-        if "-" in x:
-            x = x.rsplit("-", 1)[0]
-        return x
-
     chlog.sort(
-        cmp=rpmUtils.miscutils.compareVerOnly,
-        key=_get_chlog_ver,
+        cmp=evrcmp,
+        key=attrgetter('version'),
         reverse=True,
     )
     flat = []
     for item in chlog:
-        tm = datetime.date.fromtimestamp(int(item[0]))
-        flat.append("* %s %s" % (
-            tm.strftime("%a %b %d %Y"), yum.misc.to_unicode(item[1]))
+        tm = datetime.date.fromtimestamp(int(item.time))
+        flat.append(
+            "* %s %s - %s" % (
+                tm.strftime("%a %b %d %Y"),
+                to_unicode(item.author),
+                item.version
+            )
         )
-        flat.extend([yum.misc.to_unicode(line)
-                     for line in item[2].splitlines()])
+        flat.extend([to_unicode(line)
+                     for line in item.text.splitlines()])
         flat.append("")
     return flat
 
