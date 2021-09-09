@@ -70,7 +70,7 @@
         <td>{{ rel.target.release_date }}</td>
         <td><a></a></td>
         <td><a href="{% url 'reports:repo_repo_view' rel.target.id %}">{{ rel.target.platform.name }} {{ rel.target.release }}</a></td>
-        <td>{% for img in rel.target.images.all %}
+        <td>{% for img in rel.target.images.all|dictsort:"name" %}
             <a href="{% url 'reports:repo_image_view' img.id%}">{{ img }}</a> <a href="{{ img.url }}">(download)</a>
             {% if not forloop.last %}<br/>{% endif %}
             {% endfor %}
